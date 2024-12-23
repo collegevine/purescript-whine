@@ -1,0 +1,29 @@
+package:
+  name: purs-pg
+  dependencies:
+    - ansi
+    - argonaut-core
+    - arrays
+    - console
+    - debug
+    - effect
+    - elmish
+    - language-cst-parser
+    - maybe
+    - node-fs
+    - node-process
+    - optparse
+    - prelude
+    - record
+    - simple-json
+    - stringutils
+  test:
+    main: Test.Main
+    dependencies: []
+  bundle:
+    platform: node
+    outfile: index.mjs
+workspace:
+  packageSet:
+    registry: 56.3.0
+  extraPackages: {}
