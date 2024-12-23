@@ -33,7 +33,7 @@
 -- |     [ 1, 2,
 -- |      3, 4 ]
 -- |
-module Whine.Rules.CommaFirstArrays where
+module Whine.Core.CommaFirstArrays where
 
 import Whine.Prelude
 
@@ -41,8 +41,8 @@ import PureScript.CST.Range (rangeOf)
 import PureScript.CST.Types (Expr(..), Separated(..), Wrapped(..))
 import Whine.Types (class MonadRules, Handle(..), Rule, emptyRule)
 
-commaFirstArrays :: ∀ m. MonadRules m => {} -> Rule m
-commaFirstArrays _ = emptyRule { onExpr = onExpr }
+rule :: ∀ m. MonadRules m => JSON -> Rule m
+rule _ = emptyRule { onExpr = onExpr }
   where
     onExpr :: Handle Expr m
     onExpr = Handle case _ of

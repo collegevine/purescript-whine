@@ -1,16 +1,15 @@
 package:
-  name: whine-core
+  name: bootstrap
   dependencies:
     - ansi
     - arrays
-    - codec
-    - codec-json
     - console
     - debug
     - effect
     - elmish
     - language-cst-parser
     - maybe
+    - node-execa
     - node-fs
     - node-process
     - optparse
@@ -18,10 +17,11 @@ package:
     - record
     - simple-json
     - stringutils
-  test:
-    main: Test.Main
-    dependencies: []
-workspace:
-  packageSet:
-    registry: 62.1.0
-  extraPackages: {}
+    - uuid
+    - whine-core
+  run:
+    main: Whine.Bootstrap.Main
+  bundle:
+    module: Whine.Bootstrap.Main
+    platform: node
+    outfile: ./dist/index.mjs

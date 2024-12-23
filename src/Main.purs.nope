@@ -14,20 +14,20 @@ import Whine.Print (printViolation)
 import Whine.Rules.BadModules (badModules)
 import Whine.Rules.CaseBranchIndentation (caseBranchIndentation)
 import Whine.Rules.CommaFirstArrays (commaFirstArrays)
-import Whine.Run (runLint)
+import Whine.Run (runWhine)
 import Whine.Types ((=:>))
 
 main :: Effect Unit
 main = do
 
   let factories =
-        [ "BadModules" =:> badModules
+        [ ruleFactory "BadModules" =:> badModules
         , "CommaFirstArrays" =:> commaFirstArrays
         , "CaseBranchIndentation" =:> caseBranchIndentation
         ]
 
   globs <- drop 2 <$> argv
-  res <- runLint { factories, globs, configFile: "whine.yaml" }
+  res <- runWhine { factories, globs, configFile: "whine.yaml" }
 
   Console.log `traverse_` (printViolation `mapMaybe` res)
 

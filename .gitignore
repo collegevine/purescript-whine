@@ -4,3 +4,4 @@ output/
 .spago
 index.mjs
 .psc-ide-port
+.whine/

@@ -19,7 +19,7 @@
 -- |       Nothing ->
 -- |         0
 -- |
-module Whine.Rules.CaseBranchIndentation where
+module Whine.Core.CaseBranchIndentation where
 
 import Whine.Prelude
 
@@ -28,8 +28,8 @@ import PureScript.CST.Range (rangeOf)
 import PureScript.CST.Types (Expr(..), Separated(..))
 import Whine.Types (class MonadRules, Handle(..), Rule, emptyRule)
 
-caseBranchIndentation :: ∀ m. MonadRules m => {} -> Rule m
-caseBranchIndentation _ = emptyRule { onExpr = onExpr }
+rule :: ∀ m. MonadRules m => JSON -> Rule m
+rule _ = emptyRule { onExpr = onExpr }
   where
     onExpr :: Handle Expr m
     onExpr = Handle case _ of
@@ -47,4 +47,3 @@ caseBranchIndentation _ = emptyRule { onExpr = onExpr }
 
       _ ->
         pure unit
-

@@ -2,6 +2,9 @@ module Whine.Types where
 
 import Whine.Prelude
 
+import Codec.JSON.DecodeError as DecodeError
+import Data.Codec.JSON as CJ
+import JSON as JSON
 import PureScript.CST.Range (class RangeOf)
 import PureScript.CST.Types as CST
 
@@ -62,7 +65,7 @@ type WithMuted r = (muted :: Boolean | r)
 type WithFile r = (file :: File | r)
 
 -- | See comments on `ruleFactory`
-type RuleFactory m = Foreign -> Either String (Rule m)
+type RuleFactory m = JSON -> Either String (Rule m)
 
 -- | See comments on `ruleFactory`
 type RuleFactories m = Array (RuleId /\ RuleFactory m)
@@ -83,6 +86,8 @@ type RuleSet m = Map RuleId
 
 type File = { path :: FilePath, lines :: Maybe (Array String) }
 
+-- | The monad in which each individual rule is run. The `Writer` instance
+-- | allows the rule to report violations as it goes.
 class MonadWriter (Array (Violation ())) m <= MonadRules m
 instance MonadWriter (Array (Violation ())) m => MonadRules m
 
@@ -93,15 +98,14 @@ mapViolation f = mapWriterT \x -> do
   r /\ violations <- x
   pure $ r /\ (f <$> violations)
 
--- | This function is intended to be used in its operator form `=:>` to pair
--- | rules with their IDs. Every rule would take its own record of `{ | args }`,
--- | and the list of possible rules and their IDs would be constructed like
--- | this:
+-- | This function is intended to pair rules with their IDs. Every rule would
+-- | take its own `args` and provide a JSON codec to decode the args, and the
+-- | list of possible rules and their IDs would be constructed like this:
 -- |
 -- |     factories :: ∀ m. RuleFactories m
 -- |     factories =
--- |       [ "RuleOne" =:> ruleOne
--- |       , "RuleTwo" =:> ruleTwo
+-- |       [ ruleFactory "RuleOne" ruleOneArgsCodec ruleOne
+-- |       , ruleFactory "RuleTwo" ruleTwoArgsCodec ruleTwo
 -- |       ]
 -- |
 -- |     ruleOne :: { arg :: Int, anotherArg :: String } -> Rule m
@@ -110,10 +114,15 @@ mapViolation f = mapWriterT \x -> do
 -- | `ruleFactory` takes care of parsing the arguments and reporting any errors,
 -- | so that the actual rule implementation only has to deal with strongly typed
 -- | arguments.
-ruleFactory :: ∀ args m. CanReceiveFromJavaScript { | args } => RuleId -> ({ | args } -> Rule m) -> RuleId /\ RuleFactory m
-ruleFactory rid construct = rid /\ \args -> (construct <$> readForeign' args)
-
-infixl 5 ruleFactory as =:>
+ruleFactory :: ∀ args m. Monad m => RuleId -> CJ.Codec args -> (args -> Rule m) -> RuleId /\ RuleFactory m
+ruleFactory rid argsCodec construct =
+  rid /\ \args ->
+    case construct <$> CJ.decode argsCodec args of
+      -- If args == null and the codec rejected it, it means the rule can't work
+      -- without config, so we assume it was meant to be disabled.
+      Left _ | JSON.isNull args -> Right emptyRule
+      Left err -> Left $ DecodeError.print err
+      Right rule -> Right rule
 
 emptyRule :: ∀ m. Monad m => Rule m
 emptyRule =

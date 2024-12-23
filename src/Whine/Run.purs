@@ -5,8 +5,10 @@ import Whine.Prelude
 import Data.Array.NonEmpty as NEA
 import Data.Map as Map
 import Data.String as String
+import Effect.Class.Console as Console
 import Effect.Exception as Err
 import Node.FS.Sync (readTextFile)
+import Node.Process (exit')
 import PureScript.CST (RecoveredParserResult(..), parseModule)
 import PureScript.CST.Range (class RangeOf)
 import PureScript.CST.Traversal (traverseBinder, traverseDecl, traverseExpr, traverseModule, traverseType)
@@ -16,18 +18,28 @@ import Whine.Config (readConfig)
 import Whine.Glob (glob)
 import Whine.Glob as Glob
 import Whine.Muting (MutedRange(..), mutedRanges)
+import Whine.Print (printViolation)
 import Whine.Types (Handle(..), RuleFactories, RuleSet, Violations, WithFile, WithMuted, WithRule, mapViolation)
 
 -- | The main entry point into the linter. It takes some basic parameters and
 -- | runs the whole thing: reads the config, parses it, instantiates the rules,
 -- | globs the input files, parses them, and runs the rules through every file.
-runLint :: ∀ m. MonadEffect m =>
+runWhineAndPrintResultsAndExit :: RuleFactories (WriterT (Violations ()) Effect) -> Effect Unit
+runWhineAndPrintResultsAndExit factories = do
+  results <- runWhine { factories, globs: ["src/**/*.purs"], configFile: "whine.yaml" }
+  Console.log `traverse_` (printViolation `mapMaybe` results)
+  liftEffect $ exit' if results # any (not _.muted) then 1 else 0
+
+-- | The main entry point into the linter. It takes some basic parameters and
+-- | runs the whole thing: reads the config, parses it, instantiates the rules,
+-- | globs the input files, parses them, and runs the rules through every file.
+runWhine :: ∀ m. MonadEffect m =>
   { factories :: RuleFactories (WriterT (Violations ()) m)
   , globs :: Array String
   , configFile :: FilePath
   }
   -> m (Violations (WithRule + WithMuted + WithFile + ()))
-runLint { factories, globs, configFile } = execWriterT do
+runWhine { factories, globs, configFile } = execWriterT do
   files <- liftEffect $ fold <$> glob `traverse` globs
   ruleSet <- mapViolation (merge { muted: false }) $ readConfig factories configFile
   checkFile ruleSet `traverse_` files
