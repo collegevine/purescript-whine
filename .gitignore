@@ -2,6 +2,5 @@ node_modules/
 output/
 .purs*
 .spago
-index.mjs
 .psc-ide-port
 .whine/

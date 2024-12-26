@@ -53,7 +53,7 @@ rebuildCache { rulePackages, bundleFile } = do
       FS.unlink (cacheDir <> "/spago.lock") # tryOrDie
 
   execSuccessOrDie_ "npm install" =<<
-    execa "npm" ["install", "spago@0.93", "micromatch", "glob"] _
+    execa "npm" ["install", "spago@" <> BuildInfo.spagoVersion, "purescript@" <> BuildInfo.pursVersion, "micromatch", "glob"] _
       { cwd = Just cacheDir
       , stdout = Just StdIO.pipe
       , stderr = Just StdIO.pipe
@@ -120,7 +120,7 @@ cachedBundleMainModule { moduleName, ruleModules } = String.joinWith "\n"
 
 hashConfig :: { rulePackages :: Map { package :: String } PackageSpec } -> String
 hashConfig { rulePackages } = hashString $ fold
-  [ BuildInfo.packages."bootstrap"
+  [ BuildInfo.packages."whine-core"
   , rulePackages
       # Map.toUnfoldable
       <#> (\({ package } /\ spec) -> package <> ":" <> printPackageSpec spec)
