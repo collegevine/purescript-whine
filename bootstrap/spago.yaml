@@ -19,6 +19,9 @@ package:
     - stringutils
     - uuid
     - whine-core
+  publish:
+    version: 0.0.1
+    license: MIT
   run:
     main: Whine.Bootstrap.Main
   bundle:

@@ -29,13 +29,7 @@ import Data.Tuple.Nested (type (/\), (/\)) as Reexport
 import Effect (Effect) as Reexport
 import Effect.Class (class MonadEffect, liftEffect) as Reexport
 
-import Elmish.Foreign (class CanReceiveFromJavaScript, readForeign, readForeign') as Reexport
-
-import Foreign (Foreign) as Reexport
-
 import JSON (JSON) as Reexport
-
 import Node.Encoding (Encoding(..)) as Reexport
 import Node.Path (FilePath) as Reexport
-
 import Type.Row (type (+)) as Reexport
