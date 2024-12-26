@@ -41,6 +41,7 @@ main = launchAff_ do
       rulePackages = Map.union config.rulePackages $ Map.singleton { package: "whine-core" } Config.JustPackage
 
   mkDirP ".whine/src"
+  writeFile ".whine/package.json" "{}"
   writeFile ".whine/spago.yaml" $ Yaml.stringify $ CJ.encode spagoYamlCodec
     { package:
       { name: packageName
@@ -68,6 +69,13 @@ main = launchAff_ do
   when (rulePackages # any isLocalPackage) $
     whenM (liftEffect $ NodeFSSync.exists ".whine/spago.lock") $
       NodeFS.unlink ".whine/spago.lock" # tryOrDie
+
+  execSuccessOrDie_ "npm install" =<<
+    execa "npm" ["install", "spago@0.93", "micromatch", "glob"] _
+      { cwd = Just ".whine"
+      , stdout = Just StdIO.pipe
+      , stderr = Just StdIO.pipe
+      }
 
   moduleGraphJson <- execSuccessOrDie "spago graph modules" =<<
     execa "npx" ["spago", "graph", "modules", "--json"] _
