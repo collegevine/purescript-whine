@@ -24,4 +24,4 @@ package:
   bundle:
     module: Whine.Bootstrap.Main
     platform: node
-    outfile: ./dist/index.mjs
+    outfile: ../dist/npm/index.mjs

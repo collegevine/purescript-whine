@@ -29,7 +29,7 @@ rebuildCache :: ∀ m r. MonadAff m => MonadLog m => MonadError Error m => Monad
   -> m Unit
 rebuildCache { rulePackages, bundleFile } = do
   logInfo "Please hold on, preparing to whine..."
-  logInfo "Revisiting complaints..."
+  logInfo "Applying artificial tears..."
 
   let mainModule = "Main"
       packageName = "whine-cached-bootstrap"
@@ -98,7 +98,7 @@ rebuildCache { rulePackages, bundleFile } = do
   FS.writeFile (cacheDir <> "/src/Main.purs") $
     cachedBundleMainModule { moduleName: mainModule, ruleModules }
 
-  logSameLine "Applying artificial tears..."
+  logSameLine "Revisiting complaints..."
   execSuccessOrDie_ "spago bundle" =<<
     execa "npx" ["spago", "bundle"] _
       { cwd = Just cacheDir

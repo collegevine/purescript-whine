@@ -26,6 +26,7 @@
           ],
           "build_plan": [
             "aff",
+            "aff-promise",
             "ansi",
             "argonaut-core",
             "arraybuffer-types",
@@ -67,6 +68,7 @@
             "language-cst-parser",
             "lazy",
             "lists",
+            "literals",
             "maybe",
             "media-types",
             "mmorph",
@@ -96,6 +98,7 @@
             "posix-types",
             "prelude",
             "profunctor",
+            "psci-support",
             "random",
             "record",
             "refs",
@@ -115,6 +118,7 @@
             "unicode",
             "unsafe-coerce",
             "unsafe-reference",
+            "untagged-union",
             "uuid",
             "variant",
             "web-dom",
@@ -134,6 +138,7 @@
         "path": "./",
         "core": {
           "dependencies": [
+            "aff-promise",
             {
               "ansi": ">=7.0.0 <8.0.0"
             },
@@ -161,6 +166,7 @@
             {
               "either": ">=6.1.0 <7.0.0"
             },
+            "elmish",
             {
               "exceptions": ">=6.1.0 <7.0.0"
             },
@@ -227,13 +233,17 @@
             },
             {
               "typelevel-prelude": ">=7.0.0 <8.0.0"
-            }
+            },
+            "untagged-union"
           ],
           "build_plan": [
             "aff",
+            "aff-promise",
             "ansi",
+            "argonaut-core",
             "arraybuffer-types",
             "arrays",
+            "assert",
             "bifunctors",
             "catenable-lists",
             "codec",
@@ -243,9 +253,11 @@
             "contravariant",
             "control",
             "datetime",
+            "debug",
             "distributive",
             "effect",
             "either",
+            "elmish",
             "enums",
             "exceptions",
             "exists",
@@ -265,7 +277,9 @@
             "language-cst-parser",
             "lazy",
             "lists",
+            "literals",
             "maybe",
+            "media-types",
             "newtype",
             "node-buffer",
             "node-event-emitter",
@@ -286,6 +300,8 @@
             "posix-types",
             "prelude",
             "profunctor",
+            "psci-support",
+            "random",
             "record",
             "refs",
             "safe-coerce",
@@ -297,9 +313,120 @@
             "tuples",
             "type-equality",
             "typelevel-prelude",
+            "undefined-is-not-a-problem",
             "unfoldable",
             "unsafe-coerce",
-            "variant"
+            "untagged-union",
+            "variant",
+            "web-dom",
+            "web-events",
+            "web-file",
+            "web-html",
+            "web-storage"
+          ]
+        },
+        "test": {
+          "dependencies": [],
+          "build_plan": []
+        }
+      },
+      "whine-extension": {
+        "path": "vscode-extension",
+        "core": {
+          "dependencies": [
+            "console",
+            "effect",
+            "prelude",
+            "whine-core"
+          ],
+          "build_plan": [
+            "aff",
+            "aff-promise",
+            "ansi",
+            "argonaut-core",
+            "arraybuffer-types",
+            "arrays",
+            "assert",
+            "bifunctors",
+            "catenable-lists",
+            "codec",
+            "codec-json",
+            "console",
+            "const",
+            "contravariant",
+            "control",
+            "datetime",
+            "debug",
+            "distributive",
+            "effect",
+            "either",
+            "elmish",
+            "enums",
+            "exceptions",
+            "exists",
+            "exitcodes",
+            "foldable-traversable",
+            "foreign",
+            "foreign-object",
+            "free",
+            "functions",
+            "functors",
+            "gen",
+            "identity",
+            "integers",
+            "invariant",
+            "js-date",
+            "json",
+            "language-cst-parser",
+            "lazy",
+            "lists",
+            "literals",
+            "maybe",
+            "media-types",
+            "newtype",
+            "node-buffer",
+            "node-event-emitter",
+            "node-fs",
+            "node-path",
+            "node-process",
+            "node-streams",
+            "nonempty",
+            "now",
+            "nullable",
+            "numbers",
+            "open-memoize",
+            "optparse",
+            "ordered-collections",
+            "orders",
+            "parallel",
+            "partial",
+            "posix-types",
+            "prelude",
+            "profunctor",
+            "psci-support",
+            "random",
+            "record",
+            "refs",
+            "safe-coerce",
+            "st",
+            "strings",
+            "stringutils",
+            "tailrec",
+            "transformers",
+            "tuples",
+            "type-equality",
+            "typelevel-prelude",
+            "undefined-is-not-a-problem",
+            "unfoldable",
+            "unsafe-coerce",
+            "untagged-union",
+            "variant",
+            "web-dom",
+            "web-events",
+            "web-file",
+            "web-html",
+            "web-storage",
+            "whine-core"
           ]
         },
         "test": {
@@ -853,6 +980,15 @@
         "tailrec",
         "transformers",
         "unsafe-coerce"
+      ]
+    },
+    "aff-promise": {
+      "type": "registry",
+      "version": "4.0.0",
+      "integrity": "sha256-Kq5EupbUpXeUXx4JqGQE7/RTTz/H6idzWhsocwlEFhM=",
+      "dependencies": [
+        "aff",
+        "foreign"
       ]
     },
     "ansi": {
@@ -1421,6 +1557,20 @@
         "unfoldable"
       ]
     },
+    "literals": {
+      "type": "registry",
+      "version": "1.0.2",
+      "integrity": "sha256-RaeNZPykLhdJXYcx463xiwyC3XghrSQAqqeU28tDNW0=",
+      "dependencies": [
+        "integers",
+        "maybe",
+        "numbers",
+        "partial",
+        "prelude",
+        "typelevel-prelude",
+        "unsafe-coerce"
+      ]
+    },
     "maybe": {
       "type": "registry",
       "version": "6.0.0",
@@ -1873,6 +2023,16 @@
         "tuples"
       ]
     },
+    "psci-support": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-C6ql4P9TEP06hft/1Z5QumPA4yARR4VIxDdhmL1EO+Y=",
+      "dependencies": [
+        "console",
+        "effect",
+        "prelude"
+      ]
+    },
     "random": {
       "type": "registry",
       "version": "6.0.0",
@@ -2121,6 +2281,24 @@
       "integrity": "sha256-zU7BhfJU14nXQRZG9iADsp0mSiKhz07OcKyjRB2YT+Y=",
       "dependencies": [
         "prelude"
+      ]
+    },
+    "untagged-union": {
+      "type": "registry",
+      "version": "1.0.0",
+      "integrity": "sha256-XSSsmsOIq+JvPaXUdKCW2nGQZ2D+Ku5J6FbWj812AN0=",
+      "dependencies": [
+        "assert",
+        "console",
+        "effect",
+        "foreign",
+        "foreign-object",
+        "literals",
+        "maybe",
+        "newtype",
+        "psci-support",
+        "tuples",
+        "unsafe-coerce"
       ]
     },
     "uuid": {

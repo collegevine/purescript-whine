@@ -2,6 +2,9 @@ package:
   name: whine-core
   dependencies:
     - optparse
+    - untagged-union
+    - aff-promise
+    - elmish
     - ansi: ">=7.0.0 <8.0.0"
     - arrays: ">=7.3.0 <8.0.0"
     - bifunctors: ">=6.0.0 <7.0.0"
@@ -37,7 +40,7 @@ package:
     main: Test.Main
     dependencies: []
   publish:
-    version: 0.0.2
+    version: 0.0.6
     license: MIT
     location:
       githubOwner: collegevine

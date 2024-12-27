@@ -41,8 +41,8 @@ main = launchAff_ do
 
 entryPoint :: ReaderT Env Aff Unit
 entryPoint = do
-  text <- FS.readFile "whine.yaml"
-  config <- text # Yaml.parseYaml # lmap DecodeError.basic >>= J.decode Config.configCodec # rightOrDie
+  configText <- FS.readFile "whine.yaml"
+  config <- configText # Yaml.parseYaml # lmap DecodeError.basic >>= J.decode Config.configCodec # rightOrDie
 
   let rulePackages = Map.union config.rulePackages $ Map.singleton { package: "whine-core" } Config.JustPackage
       configHash = hashConfig { rulePackages }
@@ -56,10 +56,14 @@ entryPoint = do
     die "Failed to rebuild Whine cache"
 
   args <- liftEffect argv
-  whineResult <- liftAff $ _.getResult =<<
-    execa bundlePath (drop 2 args) _
-      { stdout = Just StdIO.inherit
-      , stderr = Just StdIO.inherit
-      }
+  whineProc <- execa bundlePath (drop 2 args) _
+    { stdout = Just StdIO.inherit
+    , stderr = Just StdIO.inherit
+    }
+  whineResult <- liftAff whineProc.getResult
+
+  unless (whineResult.exitCode == Just 0) do
+    logDebug whineResult.stdout
+    logError whineResult.stderr
 
   exit $ fromMaybe 1 whineResult.exitCode

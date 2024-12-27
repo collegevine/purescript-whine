@@ -2,37 +2,48 @@ module Whine.Cli where
 
 import Whine.Prelude
 
-import Data.Newtype (over)
 import Options.Applicative as O
+import Options.Applicative.Types as OT
 
 type Args =
-  { version :: Boolean
+  { command :: Command
+  , version :: Boolean
   , debug :: Boolean
   , quiet :: Boolean
-  , languageServer :: Boolean
   }
+
+data Command = JustWhine | LanguageServer
 
 parseCliArgs :: ∀ m. MonadEffect m => m Args
 parseCliArgs = liftEffect $
   O.customExecParser
-    (O.defaultPrefs # over O.ParserPrefs _
-      { prefShowHelpOnError = true
-      }
-    )
+    (O.prefs $ O.showHelpOnError <> O.subparserInline)
     (O.info
       (O.helper <*> argsParser)
       (O.progDesc "PureScript linter, extensible, with configurable rules, and one-off escape hatches")
     )
 
+commandParser :: O.Parser Command
+commandParser =
+  O.subparser $ O.command "language-server" $
+    O.info (ignoreLspOptions $> LanguageServer) (O.progDesc "Start Whine in Language Server mode")
+
+ignoreLspOptions :: O.Parser Unit
+ignoreLspOptions = ado
+  _ <- O.switch $ O.long "stdio"
+  _ <- O.switch $ O.long "node-ipc"
+  _ <- OT.optional $ O.strOption $ O.long "socket"
+  in unit
+
 argsParser :: O.Parser Args
 argsParser =
   ado
+    command <- commandParser <|> pure JustWhine
     version <- versionFlag
     debug <- debugFlag
     quiet <- quietFlag
-    languageServer <- languageServerFlag
   in
-    { version, debug, quiet, languageServer }
+    { command, version, debug, quiet }
 
 versionFlag :: O.Parser Boolean
 versionFlag =

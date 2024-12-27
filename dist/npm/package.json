@@ -1,0 +1,11 @@
+{
+  "name": "whine",
+  "version": "0.0.2",
+  "description": "PureScript linter, extensible, with configurable rules, and one-off escape hatches",
+  "keywords": ["purescript", "lint"],
+  "author": "Fyodor Soikin <name.fa@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/collegevine/purescript-whine",
+  "bin": "./index.js",
+  "files": ["index.js"]
+}
