@@ -14,6 +14,7 @@ import PureScript.CST.Range (class RangeOf)
 import PureScript.CST.Traversal (traverseBinder, traverseDecl, traverseExpr, traverseModule, traverseType)
 import PureScript.CST.Types (Module(..), ModuleHeader(..), Separated(..), Wrapped(..))
 import Record (merge)
+import Whine.Cli as Cli
 import Whine.Config (readConfig)
 import Whine.Glob (glob)
 import Whine.Glob as Glob
@@ -26,8 +27,10 @@ import Whine.Types (Handle(..), RuleFactories, RuleSet, Violations, WithFile, Wi
 -- | globs the input files, parses them, and runs the rules through every file.
 runWhineAndPrintResultsAndExit :: RuleFactories (WriterT (Violations ()) Effect) -> Effect Unit
 runWhineAndPrintResultsAndExit factories = do
+  args <- Cli.parseCliArgs
   results <- runWhine { factories, globs: ["src/**/*.purs"], configFile: "whine.yaml" }
-  Console.log `traverse_` (printViolation `mapMaybe` results)
+  unless args.quiet $
+    Console.log `traverse_` (printViolation `mapMaybe` results)
   liftEffect $ exit' if results # any (not _.muted) then 1 else 0
 
 -- | The main entry point into the linter. It takes some basic parameters and

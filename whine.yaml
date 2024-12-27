@@ -1,3 +1,5 @@
 rulePackages:
   - prelude
-  - whine-core
+  - whine-core:
+      local: ./
+      module: Whine.Core.WhineRules

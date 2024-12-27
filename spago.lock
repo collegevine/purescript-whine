@@ -200,6 +200,7 @@
             {
               "nullable": ">=6.0.0 <7.0.0"
             },
+            "optparse",
             {
               "ordered-collections": ">=3.2.0 <4.0.0"
             },
@@ -248,6 +249,7 @@
             "enums",
             "exceptions",
             "exists",
+            "exitcodes",
             "foldable-traversable",
             "foreign",
             "foreign-object",
@@ -275,6 +277,8 @@
             "now",
             "nullable",
             "numbers",
+            "open-memoize",
+            "optparse",
             "ordered-collections",
             "orders",
             "parallel",

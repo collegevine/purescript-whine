@@ -8,8 +8,10 @@ module Whine.Bootstrap.Cache
 import Whine.Bootstrap.Prelude
 
 import Codec.JSON.DecodeError as DecodeError
+import Control.Monad.Reader (class MonadReader, asks)
 import Data.Map as Map
 import Data.String as String
+import Effect.Exception (Error)
 import JSON as JSON
 import Node.ChildProcess.Types as StdIO
 import Spago.Generated.BuildInfo as BuildInfo
@@ -20,8 +22,15 @@ import Whine.Yaml as Yaml
 
 cacheDir = ".whine" :: String
 
-rebuildCache :: { rulePackages :: Map { package :: String } PackageSpec, bundleFile :: FilePath } -> Aff Unit
+rebuildCache :: ∀ m r. MonadAff m => MonadLog m => MonadError Error m => MonadReader { logLevel :: LogSeverity | r } m =>
+  { rulePackages :: Map { package :: String } PackageSpec
+  , bundleFile :: FilePath
+  }
+  -> m Unit
 rebuildCache { rulePackages, bundleFile } = do
+  logInfo "Please hold on, preparing to whine..."
+  logInfo "Revisiting complaints..."
+
   let mainModule = "Main"
       packageName = "whine-cached-bootstrap"
 
@@ -32,7 +41,10 @@ rebuildCache { rulePackages, bundleFile } = do
       { name: packageName
       , dependencies:
           (Map.toUnfoldable rulePackages :: Array _) <#> \({ package } /\ spec) ->
-            Map.singleton package $ printPackageSpec spec
+            Map.singleton package case spec of
+              JustPackage -> "*"
+              PackageVersion v -> v
+              LocalPackage _ -> "*"
       , bundle:
         { module: mainModule
         , platform: "node"
@@ -52,6 +64,7 @@ rebuildCache { rulePackages, bundleFile } = do
     whenM (FS.exists $ cacheDir <> "/spago.lock") $
       FS.unlink (cacheDir <> "/spago.lock") # tryOrDie
 
+  logSameLine "Coming up with excuses..."
   execSuccessOrDie_ "npm install" =<<
     execa "npm" ["install", "spago@" <> BuildInfo.spagoVersion, "purescript@" <> BuildInfo.pursVersion, "micromatch", "glob"] _
       { cwd = Just cacheDir
@@ -59,6 +72,7 @@ rebuildCache { rulePackages, bundleFile } = do
       , stderr = Just StdIO.pipe
       }
 
+  logSameLine "Making a pitiful face..."
   moduleGraphJson <- execSuccessOrDie "spago graph modules" =<<
     execa "npx" ["spago", "graph", "modules", "--json"] _
       { cwd = Just cacheDir
@@ -84,6 +98,7 @@ rebuildCache { rulePackages, bundleFile } = do
   FS.writeFile (cacheDir <> "/src/Main.purs") $
     cachedBundleMainModule { moduleName: mainModule, ruleModules }
 
+  logSameLine "Applying artificial tears..."
   execSuccessOrDie_ "spago bundle" =<<
     execa "npx" ["spago", "bundle"] _
       { cwd = Just cacheDir
@@ -91,16 +106,17 @@ rebuildCache { rulePackages, bundleFile } = do
       , stderr = Just StdIO.pipe
       }
 
+  logSameLine "Done, ready to whine."
+  logInfo ""
   where
     isLocalPackage = case _ of
       LocalPackage _ -> true
       _ -> false
 
-printPackageSpec ∷ PackageSpec -> String
-printPackageSpec = case _ of
-  JustPackage -> "*"
-  PackageVersion v -> v
-  LocalPackage _ -> "*"
+    logSameLine msg = do
+      logLevel <- asks _.logLevel
+      let prefix = if logLevel == LogDebug then "" else "\x1B[1A\x1B[K"
+      logInfo $ prefix <> msg
 
 cachedBundleMainModule :: { moduleName :: String, ruleModules :: Array String } -> String
 cachedBundleMainModule { moduleName, ruleModules } = String.joinWith "\n"
@@ -124,8 +140,13 @@ hashConfig { rulePackages } = hashString $ fold
   , rulePackages
       # Map.toUnfoldable
       <#> (\({ package } /\ spec) -> package <> ":" <> printPackageSpec spec)
-      # String.joinWith ","
+      # String.joinWith "\n"
   ]
+  where
+    printPackageSpec = case _ of
+      JustPackage -> "*"
+      PackageVersion v -> v
+      LocalPackage p -> p.path <> ":" <> fromMaybe "" p.module
 
 type SpagoYaml =
   { package ::

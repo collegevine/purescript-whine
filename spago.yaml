@@ -1,6 +1,7 @@
 package:
   name: whine-core
   dependencies:
+    - optparse
     - ansi: ">=7.0.0 <8.0.0"
     - arrays: ">=7.3.0 <8.0.0"
     - bifunctors: ">=6.0.0 <7.0.0"
