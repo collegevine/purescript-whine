@@ -7,10 +7,11 @@ module Vscode.Server.Connection
   )
   where
 
-import Prelude
+import Whine.Prelude
 
 import Control.Promise (Promise)
-import Effect (Effect)
+import Control.Promise as Promise
+import Effect.Aff.Class (class MonadAff, liftAff)
 import Vscode.Server.Capabilities (ServerCapabilities)
 import Vscode.Server.Diagnostic (Diagnostic)
 import Vscode.Server.Events (EventHandle, eventHandle)
@@ -18,11 +19,20 @@ import Vscode.Server.Events (EventHandle, eventHandle)
 data Connection :: Type
 data Connection
 
-foreign import createConnection :: Effect Connection
+createConnection :: ∀ m. MonadEffect m => m Connection
+createConnection = liftEffect createConnection_
 
-foreign import sendDiagnostics :: { uri :: String, diagnostics :: Array Diagnostic } -> Connection -> Promise Unit
+sendDiagnostics :: ∀ m. MonadAff m => { uri :: String, diagnostics :: Array Diagnostic } -> Connection -> m Unit
+sendDiagnostics args = liftAff <<< Promise.toAff <<< sendDiagnostics_ args
 
-foreign import listen :: Connection -> Effect Unit
+listen :: ∀ m. MonadEffect m => Connection -> m Unit
+listen = liftEffect <<< listen_
+
+foreign import createConnection_ :: Effect Connection
+
+foreign import sendDiagnostics_ :: { uri :: String, diagnostics :: Array Diagnostic } -> Connection -> Promise Unit
+
+foreign import listen_ :: Connection -> Effect Unit
 
 initialize :: EventHandle Connection {} { capabilities :: ServerCapabilities }
 initialize = eventHandle "Initialize"

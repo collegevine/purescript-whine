@@ -1,6 +1,6 @@
 module Whine.Runner.Cli where
 
-import Whine.Prelude
+import Whine.Runner.Prelude
 
 import Options.Applicative as O
 import Options.Applicative.Types as OT
@@ -74,3 +74,9 @@ languageServerFlag =
     [ O.long "language-server"
     , O.help "Start Whine as a language server"
     ]
+
+determineLogLevel :: Args -> LogSeverity
+determineLogLevel args =
+  if args.debug then LogDebug
+  else if args.quiet then LogError
+  else LogInfo

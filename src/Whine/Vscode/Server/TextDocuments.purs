@@ -9,9 +9,8 @@ module Vscode.Server.TextDocuments
   )
   where
 
-import Prelude
+import Whine.Prelude
 
-import Effect (Effect)
 import Elmish.Foreign (class CanReceiveFromJavaScript, Foreign, ValidationResult(..))
 import Vscode.Server.Connection (Connection)
 import Vscode.Server.Events (EventHandle, eventHandle)
@@ -33,9 +32,15 @@ didChangeContent = eventHandle "DidChangeContent"
 didSave :: EventHandle TextDocuments { document :: TextDocument } Unit
 didSave = eventHandle "DidSave"
 
-foreign import create :: Effect TextDocuments
+create :: forall m. MonadEffect m => m TextDocuments
+create = liftEffect create_
 
-foreign import listen :: TextDocuments -> Connection -> Effect Unit
+listen :: forall m. MonadEffect m => TextDocuments -> Connection -> m Unit
+listen d c = liftEffect $ listen_ d c
+
+foreign import create_ :: Effect TextDocuments
+
+foreign import listen_ :: TextDocuments -> Connection -> Effect Unit
 
 foreign import textDocumentUri :: TextDocument -> String
 

@@ -1,6 +1,6 @@
 module Whine.Runner.Config where
 
-import Whine.Prelude
+import Whine.Runner.Prelude
 
 import Codec.JSON.DecodeError as DecodeError
 import Control.Monad.Error.Class (throwError)

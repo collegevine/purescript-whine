@@ -5,28 +5,29 @@ module Whine.Bootstrap.Cache
   )
   where
 
-import Whine.Bootstrap.Prelude
+import Whine.Runner.Prelude
 
 import Codec.JSON.DecodeError as DecodeError
-import Control.Monad.Reader (class MonadReader, asks)
+import Control.Monad.Reader (asks)
 import Data.Map as Map
 import Data.String as String
-import Effect.Exception (Error)
 import JSON as JSON
 import Node.ChildProcess.Types as StdIO
 import Spago.Generated.BuildInfo as BuildInfo
-import Whine.Bootstrap.FS as FS
+import Whine.Bootstrap.Execa (execSuccessOrDie, execSuccessOrDie_, execa)
+import Whine.Bootstrap.Hash (hashString)
 import Whine.Bootstrap.JsonCodecs as J
 import Whine.Runner.Config (PackageSpec(..))
+import Whine.Runner.FS as FS
 import Whine.Runner.Yaml as Yaml
 
 cacheDir = ".whine" :: String
 
-rebuildCache :: ∀ m r. MonadAff m => MonadLog m => MonadError Error m => MonadReader { logLevel :: LogSeverity | r } m =>
+rebuildCache ::
   { rulePackages :: Map { package :: String } PackageSpec
   , bundleFile :: FilePath
   }
-  -> m Unit
+  -> RunnerM Unit
 rebuildCache { rulePackages, bundleFile } = do
   logInfo "Please hold on, preparing to whine..."
   logInfo "Applying artificial tears..."

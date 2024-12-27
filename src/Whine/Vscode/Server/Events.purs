@@ -6,11 +6,9 @@ module Vscode.Server.Events
   )
   where
 
-import Prelude
+import Whine.Prelude
 
 import Control.Monad.Error.Class (throwError)
-import Data.Either (either)
-import Effect (Effect)
 import Effect.Exception (error)
 import Effect.Uncurried (EffectFn1, EffectFn3, mkEffectFn1, runEffectFn3)
 import Elmish.Foreign (class CanPassToJavaScript, class CanReceiveFromJavaScript, Foreign, readForeign')
@@ -22,11 +20,11 @@ newtype EventHandle target a result = EventHandle String
 eventHandle :: ∀ @target @a @result. CanReceiveFromJavaScript a => EventResult result => String -> EventHandle target a result
 eventHandle = EventHandle
 
-on :: ∀ target a result. CanReceiveFromJavaScript a => EventResult result =>
-  EventHandle target a result -> (a -> Effect result) -> target -> Effect Unit
-on (EventHandle event) f =
-  runEffectFn3 unsafeOn event $
-    mkEffectFn1 $ readForeign' >>> either (throwError <<< error) (map unsafeToForeign <<< f)
+on :: ∀ target a result m. MonadEffect m => CanReceiveFromJavaScript a => EventResult result =>
+  EventHandle target a result -> (a -> Effect result) -> target -> m Unit
+on (EventHandle event) f = liftEffect <<<
+  runEffectFn3 unsafeOn event
+    (mkEffectFn1 $ readForeign' >>> either (throwError <<< error) (map unsafeToForeign <<< f))
 
 foreign import unsafeOn :: ∀ target. EffectFn3 String (EffectFn1 Foreign Foreign) target Unit
 

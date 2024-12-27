@@ -3,20 +3,22 @@ module Whine.Bootstrap.Main
   )
   where
 
-import Whine.Bootstrap.Prelude
+import Whine.Runner.Prelude
 
 import Codec.JSON.DecodeError as DecodeError
-import Control.Monad.Reader (ReaderT, runReaderT)
+import Control.Monad.Reader (runReaderT)
 import Data.Map as Map
 import Effect.Class.Console as Console
 import Node.ChildProcess.Types as StdIO
 import Node.Process (argv)
+import Node.Process as Node
 import Spago.Generated.BuildInfo as BuildInfo
 import Whine.Bootstrap.Cache (cacheDir, hashConfig, rebuildCache)
-import Whine.Bootstrap.FS as FS
+import Whine.Bootstrap.Execa (execa)
 import Whine.Bootstrap.JsonCodecs as J
 import Whine.Runner.Cli as Cli
 import Whine.Runner.Config as Config
+import Whine.Runner.FS as FS
 import Whine.Runner.Yaml as Yaml
 
 type Env = { logLevel :: LogSeverity }
@@ -27,21 +29,15 @@ main = launchAff_ do
 
   when args.version do
     Console.log BuildInfo.packages."whine-core"
-    exit 0
+    liftEffect $ Node.exit' 0
 
-  let env = { logLevel: determineLogLevel args }
+  let env = { logLevel: Cli.determineLogLevel args }
 
   runReaderT entryPoint env
 
-  where
-    determineLogLevel args =
-      if args.debug then LogDebug
-      else if args.quiet then LogError
-      else LogInfo
-
-entryPoint :: ReaderT Env Aff Unit
+entryPoint :: RunnerM Unit
 entryPoint = do
-  configText <- FS.readFile "Whine.Runner.Yaml"
+  configText <- FS.readFile "whine.yaml"
   config <- configText # Yaml.parseYaml # lmap DecodeError.basic >>= J.decode Config.configCodec # rightOrDie
 
   let rulePackages = Map.union config.rulePackages $ Map.singleton { package: "whine-core" } Config.JustPackage

@@ -1,9 +1,7 @@
 module Whine.Runner.LanguageServer where
 
-import Whine.Prelude
+import Whine.Runner.Prelude
 
-import Control.Promise (toAff)
-import Effect.Aff (launchAff_)
 import Untagged.Castable (cast)
 import Vscode.Server.Capabilities (textDocumentSyncKind)
 import Vscode.Server.Connection as Conn
@@ -13,10 +11,10 @@ import Vscode.Server.TextDocuments as Doc
 import Whine.Types (RuleFactories, Violations)
 
 startLanguageServer ::
-  { factories :: RuleFactories (WriterT (Violations ()) Effect)
+  { factories :: RuleFactories (WriterT (Violations ()) RunnerM)
   , configFile :: FilePath
   }
-  -> Effect Unit
+  -> RunnerM Unit
 startLanguageServer _ = do
   conn <- Conn.createConnection
 
@@ -31,7 +29,7 @@ startLanguageServer _ = do
           , source: "whine"
           , message: "This is a diagnostic message"
           }
-    toAff $ conn # Conn.sendDiagnostics { uri: textDocumentUri document, diagnostics: [diag] }
+    conn # Conn.sendDiagnostics { uri: textDocumentUri document, diagnostics: [diag] }
 
   Doc.listen docs conn
   Conn.listen conn

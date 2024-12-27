@@ -4,7 +4,7 @@ module Whine.Runner.Yaml
   )
   where
 
-import Whine.Prelude
+import Whine.Runner.Prelude
 
 import Data.Function.Uncurried (Fn3, runFn3)
 

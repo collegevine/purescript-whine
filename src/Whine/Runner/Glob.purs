@@ -1,6 +1,6 @@
 module Whine.Runner.Glob (glob, test) where
 
-import Whine.Prelude
+import Whine.Runner.Prelude
 import Effect.Uncurried (EffectFn1, runEffectFn1)
 
 glob :: String -> Effect (Array String)
