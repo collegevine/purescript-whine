@@ -15,9 +15,9 @@ import Spago.Generated.BuildInfo as BuildInfo
 import Whine.Bootstrap.Cache (cacheDir, hashConfig, rebuildCache)
 import Whine.Bootstrap.FS as FS
 import Whine.Bootstrap.JsonCodecs as J
-import Whine.Cli as Cli
-import Whine.Config as Config
-import Whine.Yaml as Yaml
+import Whine.Runner.Cli as Cli
+import Whine.Runner.Config as Config
+import Whine.Runner.Yaml as Yaml
 
 type Env = { logLevel :: LogSeverity }
 
@@ -41,7 +41,7 @@ main = launchAff_ do
 
 entryPoint :: ReaderT Env Aff Unit
 entryPoint = do
-  configText <- FS.readFile "whine.yaml"
+  configText <- FS.readFile "Whine.Runner.Yaml"
   config <- configText # Yaml.parseYaml # lmap DecodeError.basic >>= J.decode Config.configCodec # rightOrDie
 
   let rulePackages = Map.union config.rulePackages $ Map.singleton { package: "whine-core" } Config.JustPackage

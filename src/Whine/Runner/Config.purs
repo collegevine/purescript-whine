@@ -1,4 +1,4 @@
-module Whine.Config where
+module Whine.Runner.Config where
 
 import Whine.Prelude
 
@@ -16,7 +16,7 @@ import JSON as JSON
 import Node.FS.Sync (readTextFile)
 import Record (merge)
 import Whine.Types (RuleFactories, RuleSet, Violations, WithFile, WithRule)
-import Whine.Yaml (parseYaml)
+import Whine.Runner.Yaml (parseYaml)
 
 data PackageSpec
   = JustPackage

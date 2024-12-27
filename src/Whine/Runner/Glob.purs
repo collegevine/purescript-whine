@@ -1,4 +1,4 @@
-module Whine.Glob (glob, test) where
+module Whine.Runner.Glob (glob, test) where
 
 import Whine.Prelude
 import Effect.Uncurried (EffectFn1, runEffectFn1)

@@ -1,4 +1,4 @@
-module Whine.Server.Main where
+module Whine.Runner.LanguageServer where
 
 import Whine.Prelude
 

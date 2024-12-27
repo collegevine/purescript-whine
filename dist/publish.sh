@@ -4,7 +4,7 @@ set -e
 ROOT=$(dirname $(dirname ${BASH_SOURCE[0]}))
 
 npx spago build
-npx esbuild $ROOT/output/Whine.Client.Main/index.js --bundle --outfile=$ROOT/dist/vscode-extension/extension.js --platform=node --format=cjs --external:vscode
+npx esbuild $ROOT/output/Whine.Runner.Client.Main/index.js --bundle --outfile=$ROOT/dist/vscode-extension/extension.js --platform=node --format=cjs --external:vscode
 npx esbuild $ROOT/dist/npm/entryPoint.js --bundle --outfile=$ROOT/dist/npm/index.js --platform=node --format=cjs
 
 version=$($ROOT/dist/npm/index.js --version)

@@ -1,12 +1,10 @@
-module Whine.Run where
+module Whine.Runner where
 
 import Whine.Prelude
 
-import Data.Array as Array
 import Data.Array.NonEmpty as NEA
 import Data.Map as Map
 import Data.String as String
-import Debug (traceM)
 import Effect.Class.Console as Console
 import Effect.Exception as Err
 import Node.FS.Sync (readTextFile)
@@ -16,13 +14,13 @@ import PureScript.CST.Range (class RangeOf)
 import PureScript.CST.Traversal (traverseBinder, traverseDecl, traverseExpr, traverseModule, traverseType)
 import PureScript.CST.Types (Module(..), ModuleHeader(..), Separated(..), Wrapped(..))
 import Record (merge)
-import Whine.Cli as Cli
-import Whine.Config (readConfig)
-import Whine.Glob (glob)
-import Whine.Glob as Glob
+import Whine.Runner.Cli as Cli
+import Whine.Runner.Config (readConfig)
+import Whine.Runner.Glob (glob)
+import Whine.Runner.Glob as Glob
 import Whine.Muting (MutedRange(..), mutedRanges)
 import Whine.Print (printViolation)
-import Whine.Server.Main (startLanguageServer)
+import Whine.Runner.LanguageServer (startLanguageServer)
 import Whine.Types (Handle(..), RuleFactories, RuleSet, Violations, WithFile, WithMuted, WithRule, mapViolation)
 
 -- | The main entry point into the linter. It takes some basic parameters and
@@ -34,13 +32,13 @@ runWhineAndPrintResultsAndExit factories = do
 
   case args.command of
     Cli.JustWhine -> do
-      results <- runWhine { factories, globs: ["src/**/*.purs"], configFile: "whine.yaml" }
+      results <- runWhine { factories, globs: ["src/**/*.purs"], configFile: "Whine.Runner.Yaml" }
       unless args.quiet $
         Console.log `traverse_` (printViolation `mapMaybe` results)
       liftEffect $ exit' if results # any (not _.muted) then 1 else 0
 
     Cli.LanguageServer ->
-      startLanguageServer { factories, configFile: "whine.yaml" }
+      startLanguageServer { factories, configFile: "Whine.Runner.Yaml" }
 
 -- | The main entry point into the linter. It takes some basic parameters and
 -- | runs the whole thing: reads the config, parses it, instantiates the rules,

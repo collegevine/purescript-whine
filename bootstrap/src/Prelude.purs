@@ -16,7 +16,7 @@ import Node.Library.Execa (ExecaProcess, ExecaResult, ExecaOptions) as R
 import Node.Library.Execa (execa) as Execa
 import Node.Process (exit')
 import Whine.Bootstrap.Hash (hashString) as R
-import Whine.Bootstrap.Log (class Loggable, class MonadLog, LogSeverity(..), log, logDebug, logError, logInfo, logWarning, toDoc) as R
+import Whine.Runner.Log (class Loggable, class MonadLog, LogSeverity(..), log, logDebug, logError, logInfo, logWarning, toDoc) as R
 
 die :: ∀ m err a. R.MonadLog m => R.Loggable err => err -> m a
 die message = do

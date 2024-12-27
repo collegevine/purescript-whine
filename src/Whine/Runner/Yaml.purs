@@ -1,4 +1,4 @@
-module Whine.Yaml
+module Whine.Runner.Yaml
   ( parseYaml
   , stringify
   )

@@ -17,8 +17,8 @@ import Node.ChildProcess.Types as StdIO
 import Spago.Generated.BuildInfo as BuildInfo
 import Whine.Bootstrap.FS as FS
 import Whine.Bootstrap.JsonCodecs as J
-import Whine.Config (PackageSpec(..))
-import Whine.Yaml as Yaml
+import Whine.Runner.Config (PackageSpec(..))
+import Whine.Runner.Yaml as Yaml
 
 cacheDir = ".whine" :: String
 
@@ -123,7 +123,7 @@ cachedBundleMainModule { moduleName, ruleModules } = String.joinWith "\n"
   [ "module " <> moduleName <> " where"
   , "import Whine.Prelude"
   , "import Whine.Types (class MonadRules, RuleFactories)"
-  , "import Whine.Run (runWhineAndPrintResultsAndExit)"
+  , "import Whine.Runner (runWhineAndPrintResultsAndExit)"
   , String.joinWith "\n" ruleModuleImports
   , "main :: Effect Unit"
   , "main = runWhineAndPrintResultsAndExit $ fold"

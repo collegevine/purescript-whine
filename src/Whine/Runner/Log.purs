@@ -1,4 +1,4 @@
-module Whine.Bootstrap.Log where
+module Whine.Runner.Log where
 
 import Whine.Prelude
 

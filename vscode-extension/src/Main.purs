@@ -1,4 +1,4 @@
-module Whine.Client.Main where
+module Whine.Runner.Client.Main where
 
 import Prelude
 
@@ -21,7 +21,7 @@ activate = mkEffectFn1 \ctx -> do
       { run:
         { command: "npx"
         , transport: transportKind.stdio
-        , args: [ "whine", "language-server" ]
+        , args: [ "-y", "whine", "language-server" ]
         }
       }
     }

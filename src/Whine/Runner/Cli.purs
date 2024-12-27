@@ -1,4 +1,4 @@
-module Whine.Cli where
+module Whine.Runner.Cli where
 
 import Whine.Prelude
 
