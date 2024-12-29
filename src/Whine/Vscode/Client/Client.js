@@ -1,4 +1,4 @@
-import LC from 'vscode-languageclient/node'
+import LC from 'vscode-languageclient/node.js'
 
 export const createLanguageClient = args => () =>
     new LC.LanguageClient(

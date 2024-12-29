@@ -82,7 +82,8 @@ mutedRanges { lines } = trackedRanges.closed # Map.unionWith (<>) forceCloseOpen
               , closed
               }
 
-        Nothing -> { open, closed }
+        Nothing ->
+          { open, closed }
 
     parseLine l = do
       commentStart <- String.lastIndexOf (Pattern "-- #") l
@@ -95,4 +96,3 @@ mutedRanges { lines } = trackedRanges.closed # Map.unionWith (<>) forceCloseOpen
         onPrefix "disable " DisableSingleLine
       else
         (onPrefix "enable " Enable) <|> (onPrefix "disable " Disable)
-

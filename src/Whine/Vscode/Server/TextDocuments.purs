@@ -3,14 +3,17 @@ module Vscode.Server.TextDocuments
   , TextDocuments
   , create
   , didChangeContent
+  , didOpen
   , didSave
+  , getText
   , listen
-  , textDocumentUri
+  , uri
   )
   where
 
 import Whine.Prelude
 
+import Effect.Uncurried (EffectFn1, EffectFn2, runEffectFn1, runEffectFn2)
 import Elmish.Foreign (class CanReceiveFromJavaScript, Foreign, ValidationResult(..))
 import Vscode.Server.Connection (Connection)
 import Vscode.Server.Events (EventHandle, eventHandle)
@@ -32,16 +35,24 @@ didChangeContent = eventHandle "DidChangeContent"
 didSave :: EventHandle TextDocuments { document :: TextDocument } Unit
 didSave = eventHandle "DidSave"
 
-create :: forall m. MonadEffect m => m TextDocuments
+didOpen :: EventHandle TextDocuments { document :: TextDocument } Unit
+didOpen = eventHandle "DidOpen"
+
+create :: ∀ m. MonadEffect m => m TextDocuments
 create = liftEffect create_
 
-listen :: forall m. MonadEffect m => TextDocuments -> Connection -> m Unit
-listen d c = liftEffect $ listen_ d c
+listen :: ∀ m. MonadEffect m => TextDocuments -> Connection -> m Unit
+listen d c = liftEffect $ runEffectFn2 listen_ d c
+
+getText :: ∀ m. MonadEffect m => TextDocument -> m String
+getText = liftEffect <<< runEffectFn1 getText_
 
 foreign import create_ :: Effect TextDocuments
 
-foreign import listen_ :: TextDocuments -> Connection -> Effect Unit
+foreign import listen_ :: EffectFn2 TextDocuments Connection Unit
 
-foreign import textDocumentUri :: TextDocument -> String
+foreign import uri :: TextDocument -> String
+
+foreign import getText_ :: EffectFn1 TextDocument String
 
 foreign import isTextDocument :: Foreign -> Boolean

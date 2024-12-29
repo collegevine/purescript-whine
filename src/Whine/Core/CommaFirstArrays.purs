@@ -23,6 +23,18 @@
 -- |     ]
 -- |
 -- |     -- Bad:
+-- |     [ 1
+-- |     ,  2
+-- |     , 3
+-- |     ]
+-- |
+-- |     -- Bad:
+-- |     [ 1
+-- |      , 2
+-- |     , 3
+-- |     ]
+-- |
+-- |     -- Bad:
 -- |     [
 -- |       1,
 -- |       2,
@@ -37,6 +49,7 @@ module Whine.Core.CommaFirstArrays where
 
 import Whine.Prelude
 
+import Data.Foldable (or)
 import PureScript.CST.Range (rangeOf)
 import PureScript.CST.Types (Expr(..), Separated(..), Wrapped(..))
 import Whine.Types (class MonadRules, Handle(..), Rule, emptyRule)
@@ -61,12 +74,16 @@ rule _ = emptyRule { onExpr = onExpr }
           firstItem = open /\ items.head
           newLineStartingItems = firstItem : do
             (_ /\ prevItem) /\ (nextComma /\ nextItem) <- zip (firstItem : items.tail) items.tail
-            guard $ (rangeOf prevItem).end.line < nextComma.range.start.line
+            guard $ (rangeOf prevItem).end.line < (rangeOf nextItem).start.line
             pure $ nextComma /\ nextItem
 
           anyMisalignedPrefixes =
             newLineStartingItems # any \(prefix /\ item) ->
-              prefix.range.end.line /= (rangeOf item).start.line || prefix.range.end.column /= (rangeOf item).start.column - 1
+              or
+              [ prefix.range.end.line /= (rangeOf item).start.line
+              , prefix.range.end.column /= (rangeOf item).start.column - 1
+              , prefix.range.start.column /= open.range.start.column
+              ]
 
       _ ->
         pure unit

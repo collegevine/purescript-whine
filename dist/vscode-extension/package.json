@@ -3,7 +3,7 @@
   "publisher": "collegevine",
   "displayName": "Whine at PureScript",
   "description": "PureScript linter, extensible, with configurable rules, and one-off escape hatches",
-  "version": "0.0.6",
+  "version": "0.0.12",
   "repository": "https://github.com/collegevine/purescript-whine",
   "engines": {
     "vscode": "^1.95.0"
@@ -11,6 +11,6 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": ["onLanguage"],
+  "activationEvents": ["onLanguage:purescript"],
   "main": "./extension.js"
 }

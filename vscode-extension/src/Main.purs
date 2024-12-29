@@ -9,10 +9,10 @@ import Vscode.Client.Executable (transportKind)
 import Vscode.Context (ExtensionContext)
 
 activate :: EffectFn1 ExtensionContext Unit
-activate = mkEffectFn1 \ctx -> do
+activate = mkEffectFn1 \_ctx -> do
   client <- createLanguageClient $ cast
-    { id: "whine"
-    , name: "Whine"
+    { id: "purescript-whine"
+    , name: "Whine at PureScript"
     , clientOptions:
       { documentSelector: [ cast { scheme: "file", language: "purescript" } :: DocumentSelector ]
       , synchronize: {}
@@ -21,7 +21,7 @@ activate = mkEffectFn1 \ctx -> do
       { run:
         { command: "npx"
         , transport: transportKind.stdio
-        , args: [ "-y", "whine", "language-server" ]
+        , args: ["-y", "whine", "language-server", "--quiet"]
         }
       }
     }

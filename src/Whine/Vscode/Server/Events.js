@@ -1,1 +1,1 @@
-export const unsafeOn = (event, handler, target) => target[`on${event}`](x => { console.log(`Got ${event}`); handler(x); })
+export const unsafeOn = (event, handler, target) => target[`on${event}`](handler)

@@ -1,4 +1,4 @@
-import LS from 'vscode-languageserver/node'
+import LS from 'vscode-languageserver/node.js'
 
 export const createConnection_ = () => LS.createConnection(LS.ProposedFeatures.all)
 

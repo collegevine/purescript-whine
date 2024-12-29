@@ -15,13 +15,18 @@ execa cmd args opts = do
     Right r ->
       pure r
 
-execSuccessOrDie :: String -> ExecaProcess -> RunnerM ExecaResult
-execSuccessOrDie cmd proc = do
-  res <- liftAff proc.getResult
+execResultSuccessOrDie :: String -> ExecaResult -> RunnerM Unit
+execResultSuccessOrDie cmd res =
   when (res.exitCode /= Just 0) do
     logDebug $ "STDOUT:\n" <> res.stdout <> "\n\n"
     logDebug $ "STDERR:\n" <> res.stderr <> "\n\n"
     die $ "Error running '" <> cmd <> "'"
+
+
+execSuccessOrDie :: String -> ExecaProcess -> RunnerM ExecaResult
+execSuccessOrDie cmd proc = do
+  res <- liftAff proc.getResult
+  execResultSuccessOrDie cmd res
   pure res
 
 execSuccessOrDie_ :: String -> ExecaProcess -> RunnerM Unit

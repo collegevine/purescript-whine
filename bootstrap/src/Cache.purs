@@ -14,7 +14,7 @@ import Data.String as String
 import JSON as JSON
 import Node.ChildProcess.Types as StdIO
 import Spago.Generated.BuildInfo as BuildInfo
-import Whine.Bootstrap.Execa (execSuccessOrDie, execSuccessOrDie_, execa)
+import Whine.Bootstrap.Execa (execResultSuccessOrDie, execSuccessOrDie_, execa)
 import Whine.Bootstrap.Hash (hashString)
 import Whine.Bootstrap.JsonCodecs as J
 import Whine.Runner.Config (PackageSpec(..))
@@ -67,21 +67,24 @@ rebuildCache { rulePackages, bundleFile } = do
 
   logSameLine "Coming up with excuses..."
   execSuccessOrDie_ "npm install" =<<
-    execa "npm" ["install", "spago@" <> BuildInfo.spagoVersion, "purescript@" <> BuildInfo.pursVersion, "micromatch", "glob"] _
-      { cwd = Just cacheDir
-      , stdout = Just StdIO.pipe
-      , stderr = Just StdIO.pipe
-      }
+    execa "npm"
+      [ "install"
+      , "spago@" <> BuildInfo.spagoVersion
+      , "purescript@" <> BuildInfo.pursVersion
+      , "micromatch"
+      , "glob"
+      , "vscode-languageserver"
+      , "vscode-languageserver-textdocument"
+      ]
+      _
+        { cwd = Just cacheDir
+        , stdout = Just StdIO.pipe
+        , stderr = Just StdIO.pipe
+        }
 
   logSameLine "Making a pitiful face..."
-  moduleGraphJson <- execSuccessOrDie "spago graph modules" =<<
-    execa "npx" ["spago", "graph", "modules", "--json"] _
-      { cwd = Just cacheDir
-      , stdout = Just StdIO.pipe
-      , stderr = Just StdIO.pipe
-      }
-
-  moduleGraph <- moduleGraphJson.stdout # JSON.parse # lmap DecodeError.basic >>= J.decode moduleGraphCodec # rightOrDie
+  moduleGraphJson <- spagoGraphModules
+  moduleGraph <- moduleGraphJson # JSON.parse # lmap DecodeError.basic >>= J.decode moduleGraphCodec # rightOrDie
 
   let candidateModules = Map.fromFoldable do
         modul /\ { package } <- Map.toUnfoldable moduleGraph :: Array _
@@ -118,6 +121,32 @@ rebuildCache { rulePackages, bundleFile } = do
       logLevel <- asks _.logLevel
       let prefix = if logLevel == LogDebug then "" else "\x1B[1A\x1B[K"
       logInfo $ prefix <> msg
+
+    spagoGraphModules = do
+      proc <-
+        execa "npx" ["spago", "graph", "modules", "--json"] _
+          { cwd = Just cacheDir
+          , stdout = Just StdIO.pipe
+          , stderr = Just StdIO.pipe
+          }
+
+      res <- liftAff proc.getResult
+
+      unless (res.exitCode == Just 0) do
+        logDebug "'spago graph modules' failed. Trying to build to see what the error was..."
+        FS.writeFile (cacheDir <> "/src/Main.purs") "module M where\nx = 42 :: Int"
+        execSuccessOrDie_ "spago build" =<<
+          execa "npx" ["spago", "build"] _
+            { cwd = Just cacheDir
+            , stdout = Just StdIO.pipe
+            , stderr = Just StdIO.pipe
+            }
+
+        logDebug "Building succeeded, but 'spago graph modules' still failed."
+        execResultSuccessOrDie "spago graph modules" res
+
+      pure res.stdout
+
 
 cachedBundleMainModule :: { moduleName :: String, ruleModules :: Array String } -> String
 cachedBundleMainModule { moduleName, ruleModules } = String.joinWith "\n"

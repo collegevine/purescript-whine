@@ -6,7 +6,6 @@ module Whine.Bootstrap.Main
 import Whine.Runner.Prelude
 
 import Codec.JSON.DecodeError as DecodeError
-import Control.Monad.Reader (runReaderT)
 import Data.Map as Map
 import Effect.Class.Console as Console
 import Node.ChildProcess.Types as StdIO
@@ -53,9 +52,11 @@ entryPoint = do
 
   args <- liftEffect argv
   whineProc <- execa bundlePath (drop 2 args) _
-    { stdout = Just StdIO.inherit
+    { stdin = Just StdIO.inherit
+    , stdout = Just StdIO.inherit
     , stderr = Just StdIO.inherit
     }
+
   whineResult <- liftAff whineProc.getResult
 
   unless (whineResult.exitCode == Just 0) do

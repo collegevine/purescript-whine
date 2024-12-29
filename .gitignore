@@ -3,4 +3,5 @@ output/
 .purs*
 .spago
 .psc-ide-port
+.psci_modules/
 .whine/
