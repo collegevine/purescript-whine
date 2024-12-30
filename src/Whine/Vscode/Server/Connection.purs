@@ -14,7 +14,7 @@ import Control.Promise as Promise
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Vscode.Server.Capabilities (ServerCapabilities)
 import Vscode.Server.Diagnostic (Diagnostic)
-import Vscode.Server.Events (EventHandle, eventHandle)
+import Vscode.Events (EventHandle, eventHandle)
 
 data Connection :: Type
 data Connection

@@ -5,6 +5,7 @@ module Vscode.Client
   , ServerOptions
   , createLanguageClient
   , start
+  , stop
   )
   where
 
@@ -14,6 +15,7 @@ import Effect (Effect)
 import Untagged.Union (UndefinedOr)
 import Vscode.Client.Executable (Executable)
 import Vscode.Client.FileSystemWatcher (FileSystemWatcher)
+import Vscode.Workspace (WorkspaceFolder)
 
 data LanguageClient :: Type
 data LanguageClient
@@ -21,6 +23,7 @@ data LanguageClient
 type ClientOptions =
   { documentSelector :: Array DocumentSelector
   , synchronize :: { fileEvents :: UndefinedOr FileSystemWatcher }
+  , workspaceFolder :: WorkspaceFolder
   }
 
 type DocumentSelector =
@@ -40,3 +43,5 @@ foreign import createLanguageClient ::
   -> Effect LanguageClient
 
 foreign import start :: LanguageClient -> Effect Unit
+
+foreign import stop :: LanguageClient -> Effect Unit

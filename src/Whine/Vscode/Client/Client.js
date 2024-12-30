@@ -5,4 +5,5 @@ export const createLanguageClient = args => () =>
       args.id, args.name, args.serverOptions, args.clientOptions
     )
 
-export const start = client => () => { client.start(); return }
+export const start = client => () => client.start()
+export const stop = client => () => client.stop()

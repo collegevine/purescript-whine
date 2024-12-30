@@ -10,7 +10,7 @@ import Untagged.Castable (cast)
 import Vscode.Server.Capabilities (textDocumentSyncKind)
 import Vscode.Server.Connection as Conn
 import Vscode.Server.Diagnostic (diagnosticSeverity)
-import Vscode.Server.Events (on)
+import Vscode.Events (on)
 import Vscode.Server.TextDocuments as Doc
 import Whine (checkModule)
 import Whine.Runner.Config (readConfig)

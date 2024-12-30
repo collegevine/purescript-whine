@@ -16,7 +16,7 @@ import Whine.Prelude
 import Effect.Uncurried (EffectFn1, EffectFn2, runEffectFn1, runEffectFn2)
 import Elmish.Foreign (class CanReceiveFromJavaScript, Foreign, ValidationResult(..))
 import Vscode.Server.Connection (Connection)
-import Vscode.Server.Events (EventHandle, eventHandle)
+import Vscode.Events (EventHandle, eventHandle)
 
 data TextDocuments :: Type
 data TextDocuments

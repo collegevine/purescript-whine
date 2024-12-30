@@ -1,4 +1,4 @@
-module Vscode.Server.Events
+module Vscode.Events
   ( EventHandle
   , class EventResult
   , eventHandle
