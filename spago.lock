@@ -138,7 +138,12 @@
         "path": "./",
         "core": {
           "dependencies": [
-            "aff-promise",
+            {
+              "aff": ">=7.0.0 <9.0.0"
+            },
+            {
+              "aff-promise": ">=4.0.0 <5.0.0"
+            },
             {
               "ansi": ">=7.0.0 <8.0.0"
             },
@@ -166,12 +171,20 @@
             {
               "either": ">=6.1.0 <7.0.0"
             },
-            "elmish",
+            {
+              "elmish": ">=0.13.0 <0.14.0"
+            },
             {
               "exceptions": ">=6.1.0 <7.0.0"
             },
             {
               "foldable-traversable": ">=6.0.0 <7.0.0"
+            },
+            {
+              "foreign": ">=7.0.0 <8.0.0"
+            },
+            {
+              "foreign-object": ">=4.1.0 <5.0.0"
             },
             {
               "functions": ">=6.0.0 <7.0.0"
@@ -206,7 +219,9 @@
             {
               "nullable": ">=6.0.0 <7.0.0"
             },
-            "optparse",
+            {
+              "optparse": ">=5.0.1 <6.0.0"
+            },
             {
               "ordered-collections": ">=3.2.0 <4.0.0"
             },
@@ -234,7 +249,9 @@
             {
               "typelevel-prelude": ">=7.0.0 <8.0.0"
             },
-            "untagged-union"
+            {
+              "untagged-union": ">=1.0.0 <2.0.0"
+            }
           ],
           "build_plan": [
             "aff",
