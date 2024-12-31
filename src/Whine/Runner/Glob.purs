@@ -1,11 +1,12 @@
-module Whine.Runner.Glob (glob, test) where
+module Whine.Runner.Glob where
 
 import Whine.Runner.Prelude
-import Effect.Uncurried (EffectFn1, runEffectFn1)
 
-glob :: String -> Effect (Array String)
-glob = runEffectFn1 globSync
+type Globs = { include :: Array NonEmptyString, exclude :: Array NonEmptyString }
 
-foreign import globSync :: EffectFn1 String (Array String)
+foreign import glob :: Globs -> Effect (Array FilePath)
 
-foreign import test :: Array String -> FilePath -> Boolean
+foreign import test :: Globs -> FilePath -> Boolean
+
+isEmptyGlobs :: Globs -> Boolean
+isEmptyGlobs { include, exclude } = null include && null exclude

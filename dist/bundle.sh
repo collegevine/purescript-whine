@@ -10,7 +10,7 @@ description="PureScript linter, extensible, with configurable rules, and one-off
 
 for file in $ROOT/dist/npm/package.json $ROOT/dist/vscode-extension/package.json; do
   sed -i "s/\"version\": \".*\"/\"version\": \"$version\"/g" $file
-  sed -i "s/\"description\": \".*\"/\"description\": \"$description\"/g" $file
+  sed -i "s/\n  \"description\": \".*\"/\n  \"description\": \"$description\"/g" $file
 done
 
 cp $ROOT/LICENSE.txt $ROOT/dist/vscode-extension

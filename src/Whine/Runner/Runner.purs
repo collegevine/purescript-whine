@@ -23,13 +23,13 @@ runWhineAndPrintResultsAndExit factories = launchAff_ do
   let env = { logLevel: Cli.determineLogLevel args }
       main = case args.command of
         Cli.JustWhine -> do
-          results <- runWhine { factories, globs: ["src/**/*.purs"], configFile: "whine.yaml" }
+          results <- runWhine { factories, configFile: "whine.yaml" }
           unless args.quiet $
             Console.log `traverse_` (printViolation `mapMaybe` results)
           liftEffect $ exit' if results # any (not _.muted) then 1 else 0
 
-        Cli.LanguageServer ->
-          startLanguageServer { factories, configFile: "whine.yaml" }
+        Cli.LanguageServer checkWhen ->
+          startLanguageServer { factories, configFile: "whine.yaml", checkWhen }
 
   runReaderT main env
 
@@ -38,11 +38,10 @@ runWhineAndPrintResultsAndExit factories = launchAff_ do
 -- | globs the input files, parses them, and runs the rules through every file.
 runWhine :: ∀ m. MonadEffect m =>
   { factories :: RuleFactories (WriterT (Violations ()) m)
-  , globs :: Array String
   , configFile :: FilePath
   }
   -> m (Violations (WithRule + WithMuted + WithFile + ()))
-runWhine { factories, globs, configFile } = execWriterT do
-  files <- liftEffect $ fold <$> glob `traverse` globs
-  ruleSet <- mapViolation (merge { muted: false }) $ readConfig factories configFile
-  checkFile ruleSet `traverse_` files
+runWhine { factories, configFile } = execWriterT do
+  config <- mapViolation (merge { muted: false }) $ readConfig factories configFile
+  files <- liftEffect $ glob config.files
+  checkFile config.rules `traverse_` files

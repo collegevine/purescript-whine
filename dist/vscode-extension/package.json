@@ -3,7 +3,7 @@
   "publisher": "collegevine",
   "displayName": "Whine at PureScript",
   "description": "PureScript linter, extensible, with configurable rules, and one-off escape hatches",
-  "version": "0.0.13",
+  "version": "0.0.15",
   "repository": "https://github.com/collegevine/purescript-whine",
   "engines": {
     "vscode": "^1.95.0"
@@ -12,5 +12,25 @@
     "Other"
   ],
   "activationEvents": ["onLanguage:purescript"],
-  "main": "./extension.js"
+  "main": "./extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Whine at PureScript",
+      "properties": {
+        "whine.languageServerStartCommand": {
+          "type": "string",
+          "scope": "resource",
+          "default": "npx -y whine language-server --quiet",
+          "description": "Command to start the Whine language server."
+        },
+        "whine.checkOn": {
+          "type": "string",
+          "enum": ["save", "change"],
+          "scope": "resource",
+          "default": "save",
+          "description": "When to check the file for violations. Choosing 'change' may put extra load on your system as Whine will recheck the file on every single keystroke."
+        }
+      }
+    }
+  }
 }

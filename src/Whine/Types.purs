@@ -70,20 +70,6 @@ type RuleFactory m = JSON -> Either String (Rule m)
 -- | See comments on `ruleFactory`
 type RuleFactories m = Array (RuleId /\ RuleFactory m)
 
--- | For every rule ID we have a rule implementation `Rule m` and some common
--- | config values that can be applied to any rule and are handled by the
--- | framework.
-type RuleSet m = Map RuleId
-  { rule :: Rule m
-  , globs ::
-      { include :: Maybe (NonEmptyArray String)
-      -- ^ `Nothing` means all files are included. `Just` means only listed files are.
-
-      , exclude :: Maybe (NonEmptyArray String)
-      -- ^ `Nothing` means no files are excluded. `Just` means listed files are excluded.
-      }
-  }
-
 type File = { path :: FilePath, lines :: Maybe (Array String) }
 
 -- | The monad in which each individual rule is run. The `Writer` instance

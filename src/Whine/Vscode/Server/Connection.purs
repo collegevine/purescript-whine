@@ -12,9 +12,9 @@ import Whine.Prelude
 import Control.Promise (Promise)
 import Control.Promise as Promise
 import Effect.Aff.Class (class MonadAff, liftAff)
+import Vscode.Events (EventHandle, eventHandle)
 import Vscode.Server.Capabilities (ServerCapabilities)
 import Vscode.Server.Diagnostic (Diagnostic)
-import Vscode.Events (EventHandle, eventHandle)
 
 data Connection :: Type
 data Connection

@@ -15,7 +15,7 @@ import Effect (Effect)
 import Untagged.Union (UndefinedOr)
 import Vscode.Client.Executable (Executable)
 import Vscode.Client.FileSystemWatcher (FileSystemWatcher)
-import Vscode.Workspace (WorkspaceFolder)
+import Vscode.Client.Workspace (Workspace, WorkspaceFolder)
 
 data LanguageClient :: Type
 data LanguageClient

@@ -1,11 +1,11 @@
-module Vscode.Workspace
+module Vscode.Client.Workspace
   ( Uri
   , Workspace
   , WorkspaceFolder
   , didChangeWorkspaceFolders
   , didOpenTextDocument
+  , getConfiguration
   , getWorkspaceFolder
-  , textDocuments
   , workspace
   )
   where
@@ -16,9 +16,9 @@ import Data.Maybe (Maybe)
 import Data.Nullable (Nullable)
 import Data.Nullable as Nullable
 import Effect (Effect)
-import Effect.Uncurried (EffectFn1, runEffectFn1)
+import Effect.Uncurried (EffectFn1, EffectFn2, runEffectFn1, runEffectFn2)
+import Vscode.Client.Configuration (Configuration)
 import Vscode.Events (EventHandle, eventHandle)
-import Vscode.Server.TextDocuments (TextDocument)
 
 type Uri = { fsPath :: String, scheme :: String }
 
@@ -33,14 +33,14 @@ didOpenTextDocument = eventHandle "DidOpenTextDocument"
 didChangeWorkspaceFolders :: EventHandle Workspace { added :: Array WorkspaceFolder, removed :: Array WorkspaceFolder } Unit
 didChangeWorkspaceFolders = eventHandle "DidChangeWorkspaceFolders"
 
-foreign import workspace :: Workspace
-
 getWorkspaceFolder :: Uri -> Effect (Maybe WorkspaceFolder)
 getWorkspaceFolder uri = Nullable.toMaybe <$> runEffectFn1 getWorkspaceFolder_ uri
 
-textDocuments :: Workspace -> Effect (Array TextDocument)
-textDocuments = runEffectFn1 textDocuments_
+getConfiguration :: String -> Workspace -> Effect Configuration
+getConfiguration = runEffectFn2 getConfiguration_
 
 foreign import getWorkspaceFolder_ :: EffectFn1 Uri (Nullable WorkspaceFolder)
 
-foreign import textDocuments_ :: EffectFn1 Workspace (Array TextDocument)
+foreign import getConfiguration_ :: EffectFn2 String Workspace Configuration
+
+foreign import workspace :: Workspace

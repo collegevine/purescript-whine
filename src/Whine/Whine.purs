@@ -2,7 +2,6 @@ module Whine where
 
 import Whine.Prelude
 
-import Data.Array.NonEmpty as NEA
 import Data.Map as Map
 import Data.String as String
 import Effect.Exception as Err
@@ -15,8 +14,9 @@ import PureScript.CST.Types (Expr(..), Module(..), ModuleHeader(..), Separated(.
 import PureScript.CST.Types as CST
 import Record (merge)
 import Whine.Muting (MutedRange(..), mutedRanges)
+import Whine.Runner.Config (RuleSet)
 import Whine.Runner.Glob as Glob
-import Whine.Types (Handle(..), RuleSet, Violations, WithFile, WithMuted, WithRule, mapViolation)
+import Whine.Types (Handle(..), Violations, WithFile, WithMuted, WithRule, mapViolation)
 
 -- | Given a parsed PS module, runs all the rules on it. The rules report
 -- | violations via Writer side-effects.
@@ -81,7 +81,8 @@ checkFile rules path = do
   case eText of
     Left err ->
       tell
-        [ { message: "Failed to read the file: " <> Err.message err
+        [
+          { message: "Failed to read the file: " <> Err.message err
           , source: Nothing
           , muted: false
           , rule: ""
@@ -129,10 +130,7 @@ checkModule rules { path, text } =
       guard $ any (isIntersecting source) rs
       pure true
 
-    isExcludedByPath v =
-      let
-        rule = Map.lookup v.rule rules
-        included = rule >>= _.globs.include # maybe true \i -> Glob.test (NEA.toArray i) path
-        excluded = rule >>= _.globs.exclude # maybe false \e -> Glob.test (NEA.toArray e) path
-      in
-        excluded || not included
+    isExcludedByPath v = fromMaybe false do
+      rule <- Map.lookup v.rule rules
+      let pathIsOk = Glob.isEmptyGlobs rule.globs || Glob.test rule.globs path
+      pure $ not pathIsOk

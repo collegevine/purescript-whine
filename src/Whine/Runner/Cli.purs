@@ -12,7 +12,9 @@ type Args =
   , quiet :: Boolean
   }
 
-data Command = JustWhine | LanguageServer
+data Command = JustWhine | LanguageServer CheckFileWhen
+
+data CheckFileWhen = CheckOnSave | CheckOnChange
 
 parseCliArgs :: ∀ m. MonadEffect m => m Args
 parseCliArgs = liftEffect $
@@ -26,14 +28,17 @@ parseCliArgs = liftEffect $
 commandParser :: O.Parser Command
 commandParser =
   O.subparser $ O.command "language-server" $
-    O.info (ignoreLspOptions $> LanguageServer) (O.progDesc "Start Whine in Language Server mode")
+    O.info
+      (LanguageServer <$> languageServerArgsParser)
+      (O.progDesc "Start Whine in Language Server mode")
 
-ignoreLspOptions :: O.Parser Unit
-ignoreLspOptions = ado
+languageServerArgsParser :: O.Parser CheckFileWhen
+languageServerArgsParser = ado
   _ <- O.switch $ O.long "stdio"
   _ <- O.switch $ O.long "node-ipc"
   _ <- OT.optional $ O.strOption $ O.long "socket"
-  in unit
+  checkWhen <- checkWhenOption
+  in checkWhen # fromMaybe CheckOnSave
 
 argsParser :: O.Parser Args
 argsParser =
@@ -80,3 +85,23 @@ determineLogLevel args =
   if args.debug then LogDebug
   else if args.quiet then LogError
   else LogInfo
+
+checkWhenOption :: O.Parser (Maybe CheckFileWhen)
+checkWhenOption =
+  OT.optional $ O.option checkWhen $ fold
+    [ O.long "check-on"
+    , O.help $ fold
+      [ "When to check files for violations. Possible values are "
+      , "'", saveOption, "' to check when a file is saved or "
+      , "'", changeOption, "' to check on every change. "
+      , "Default is '", saveOption, "'."
+      ]
+    ]
+  where
+    saveOption = "save"
+    changeOption = "change"
+
+    checkWhen = O.eitherReader \s -> do
+      if s == saveOption then Right CheckOnSave
+      else if s == changeOption then Right CheckOnChange
+      else Left $ "Invalid value: " <> s

@@ -5,26 +5,42 @@ import Whine.Runner.Prelude
 import Codec.JSON.DecodeError as DecodeError
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Writer (runWriter)
-import Data.Array.NonEmpty as NEA
 import Data.Codec as Codec
 import Data.Codec.JSON as CJ
 import Data.Codec.JSON.Common as CJ.Common
 import Data.Codec.JSON.Strict as CJS
 import Data.Map as Map
+import Data.String.NonEmpty as NES
 import Effect.Exception as Err
 import JSON as JSON
 import Node.FS.Sync (readTextFile)
 import Record (merge)
-import Whine.Types (RuleFactories, RuleSet, Violations, WithFile, WithRule)
+import Whine.Runner.Glob (Globs)
 import Whine.Runner.Yaml (parseYaml)
+import Whine.Types (RuleFactories, RuleId, Violations, WithFile, WithRule, Rule)
 
 data PackageSpec
   = JustPackage
   | PackageVersion String
   | LocalPackage { path :: FilePath, module :: Maybe String }
 
-type Config =
+type Config m =
+  { rules :: RuleSet m
+  , files :: Globs
+  }
+
+-- | For every rule ID we have a rule implementation `Rule m` and some common
+-- | config values that can be applied to any rule and are handled by the
+-- | framework.
+type RuleSet m = Map RuleId
+  { rule :: Rule m
+  , globs :: Globs
+  }
+
+type ConfigJson =
   { rulePackages :: Map { package :: String } PackageSpec
+  , include :: Maybe (Array NonEmptyString)
+  , exclude :: Maybe (Array NonEmptyString)
   , rules :: Maybe (Map String JSON)
   }
 
@@ -54,8 +70,8 @@ type Config =
 -- | The whole thing runs in a writer monad to which it can report any errors
 -- | while parsing the config. The errors doesn't stop the parsing, but
 -- | erroneous rules do not make it into the resulting map.
-parseConfig :: ∀ m n. MonadWriter (Violations (WithRule + ())) m => RuleFactories n -> Map String JSON -> m (RuleSet n)
-parseConfig factories config =
+parseRuleConfigs :: ∀ m n. MonadWriter (Violations (WithRule + ())) m => RuleFactories n -> Map String JSON -> m (RuleSet n)
+parseRuleConfigs factories config =
   Map.fromFoldable <$> catMaybes <$>
     for factories \(ruleId /\ factory) -> do
 
@@ -77,8 +93,8 @@ parseConfig factories config =
             Just value ->
               value # CJ.decode codec # lmap DecodeError.print # orFail ("Malformed '" <> name <> "'")
 
-      include <- commonProp "include" (CJ.array CJ.string)
-      exclude <- commonProp "exclude" (CJ.array CJ.string)
+      include <- commonProp "include" (CJ.array CJ.Common.nonEmptyString)
+      exclude <- commonProp "exclude" (CJ.array CJ.Common.nonEmptyString)
       enabled <- commonProp "enabled" CJ.boolean <#> fromMaybe true
 
       if enabled then
@@ -86,8 +102,8 @@ parseConfig factories config =
           <#> (\rule -> ruleId /\
             { rule
             , globs:
-              { include: include >>= NEA.fromArray
-              , exclude: exclude >>= NEA.fromArray
+              { include: include # fromMaybe []
+              , exclude: exclude # fromMaybe []
               }
             }
           )
@@ -96,7 +112,7 @@ parseConfig factories config =
         pure Nothing
 
 -- | Reads config from a given file and parses it.
-readConfig :: ∀ m n. MonadEffect m => MonadWriter (Violations (WithRule + WithFile + ())) m => RuleFactories n -> FilePath -> m (RuleSet n)
+readConfig :: ∀ m n. MonadEffect m => MonadWriter (Violations (WithRule + WithFile + ())) m => RuleFactories n -> FilePath -> m (Config n)
 readConfig factories configFile = do
   text <- lmap Err.message <$> liftEffect (try $ readTextFile UTF8 configFile)
 
@@ -114,14 +130,22 @@ readConfig factories configFile = do
     Right c ->
       pure c
 
-  let res /\ violations = runWriter $ parseConfig factories (config.rules # fromMaybe Map.empty)
+  let res /\ violations = runWriter $ parseRuleConfigs factories (config.rules # fromMaybe Map.empty)
 
   tell $ violations <#> merge { file: { path: configFile, lines: Nothing } }
-  pure res
+  pure
+    { rules: res
+    , files:
+        { include: config.include # fromMaybe (NES.fromString `mapMaybe` ["src/**/*.purs", "test/**/*.purs"])
+        , exclude: config.exclude # fromMaybe []
+        }
+    }
 
-configCodec :: CJ.Codec Config
+configCodec :: CJ.Codec ConfigJson
 configCodec = CJS.objectStrict $ CJS.record
   # CJS.recordProp @"rulePackages" packagesCodec
+  # CJS.recordPropOptional @"include" (CJ.array CJ.Common.nonEmptyString)
+  # CJS.recordPropOptional @"exclude" (CJ.array CJ.Common.nonEmptyString)
   # CJS.recordPropOptional @"rules" (CJ.Common.strMap CJ.json)
 
 packagesCodec :: CJ.Codec (Map { package :: String } PackageSpec)
@@ -157,8 +181,10 @@ packagesCodec = dimap Map.toUnfoldable Map.fromFoldable $ CJ.array packageCodec
         # CJS.recordProp @"local" CJ.string
         # CJS.recordPropOptional @"module" CJ.string
 
-defaultConfig :: Config
+defaultConfig :: ConfigJson
 defaultConfig =
   { rulePackages: Map.singleton { package: "whine-core" } JustPackage
+  , include: Nothing
+  , exclude: Nothing
   , rules: Nothing
   }

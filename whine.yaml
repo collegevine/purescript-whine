@@ -1,3 +1,5 @@
+exclude:
+  - "**/Whine.purs"
 rulePackages:
   - prelude
   - whine-core:
