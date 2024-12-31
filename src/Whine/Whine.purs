@@ -81,8 +81,7 @@ checkFile rules path = do
   case eText of
     Left err ->
       tell
-        [
-          { message: "Failed to read the file: " <> Err.message err
+        [ { message: "Failed to read the file: " <> Err.message err
           , source: Nothing
           , muted: false
           , rule: ""
@@ -130,7 +129,9 @@ checkModule rules { path, text } =
       guard $ any (isIntersecting source) rs
       pure true
 
-    isExcludedByPath v = fromMaybe false do
-      rule <- Map.lookup v.rule rules
-      let pathIsOk = Glob.isEmptyGlobs rule.globs || Glob.test rule.globs path
-      pure $ not pathIsOk
+    isExcludedByPath v =
+      let globs = Map.lookup v.rule rules <#> _.globs # fromMaybe Glob.emptyGlobs
+          included = null globs.include || Glob.test { include: globs.include, exclude: [] } path
+          excluded = Glob.test { include: globs.exclude, exclude: [] } path
+      in
+        excluded || not included

@@ -10,3 +10,6 @@ foreign import test :: Globs -> FilePath -> Boolean
 
 isEmptyGlobs :: Globs -> Boolean
 isEmptyGlobs { include, exclude } = null include && null exclude
+
+emptyGlobs :: Globs
+emptyGlobs = { include: [], exclude: [] }
