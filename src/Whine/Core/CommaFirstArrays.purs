@@ -1,10 +1,10 @@
 -- | Checks that array literals are written comma-first style, with elements
--- | aligned vertically, one space to the left of the commas.
+-- | aligned vertically, one space to the right of the commas.
 -- |
--- | Single-line array are excepted.
+-- | Single-line arrays are ok.
 -- |
--- | Several elements on the same line are ok, as long as the first of them is
--- | aligned correctly.
+-- | Several elements on the same line are ok, as long as the first one of them
+-- | is aligned correctly.
 -- |
 -- |     -- Good:
 -- |     [ 1
@@ -83,6 +83,7 @@ rule _ = emptyRule { onExpr = onExpr }
               [ prefix.range.end.line /= (rangeOf item).start.line
               , prefix.range.end.column /= (rangeOf item).start.column - 1
               , prefix.range.start.column /= open.range.start.column
+              , open.range.start.column /= close.range.start.column
               ]
 
       _ ->

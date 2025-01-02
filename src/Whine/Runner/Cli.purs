@@ -2,6 +2,9 @@ module Whine.Runner.Cli where
 
 import Whine.Runner.Prelude
 
+import Data.Array.NonEmpty as NEA
+import Data.List as List
+import Data.String.NonEmpty.Internal as NES
 import Options.Applicative as O
 import Options.Applicative.Types as OT
 
@@ -12,7 +15,13 @@ type Args =
   , quiet :: Boolean
   }
 
-data Command = JustWhine | LanguageServer CheckFileWhen
+data Command
+  = JustWhine JustWhineArgs
+  | LanguageServer LanguagServerArgs
+
+type JustWhineArgs = { globs :: Maybe (NonEmptyArray NonEmptyString) }
+
+type LanguagServerArgs = { checkWhen :: CheckFileWhen }
 
 data CheckFileWhen = CheckOnSave | CheckOnChange
 
@@ -32,18 +41,28 @@ commandParser =
       (LanguageServer <$> languageServerArgsParser)
       (O.progDesc "Start Whine in Language Server mode")
 
-languageServerArgsParser :: O.Parser CheckFileWhen
+justWhineArgsParser :: O.Parser JustWhineArgs
+justWhineArgsParser = ado
+  args <- OT.many $ O.strArgument $ fold
+    [ O.metavar "GLOB"
+    , O.help "Glob patterns to match files to lint. When empty, all files are linted."
+    ]
+  in
+    { globs: NEA.fromFoldable $ List.mapMaybe NES.fromString args
+    }
+
+languageServerArgsParser :: O.Parser LanguagServerArgs
 languageServerArgsParser = ado
   _ <- O.switch $ O.long "stdio"
   _ <- O.switch $ O.long "node-ipc"
   _ <- OT.optional $ O.strOption $ O.long "socket"
   checkWhen <- checkWhenOption
-  in checkWhen # fromMaybe CheckOnSave
+  in { checkWhen: checkWhen # fromMaybe CheckOnSave }
 
 argsParser :: O.Parser Args
 argsParser =
   ado
-    command <- commandParser <|> pure JustWhine
+    command <- commandParser <|> (JustWhine <$> justWhineArgsParser)
     version <- versionFlag
     debug <- debugFlag
     quiet <- quietFlag

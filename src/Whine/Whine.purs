@@ -131,7 +131,4 @@ checkModule rules { path, text } =
 
     isExcludedByPath v =
       let globs = Map.lookup v.rule rules <#> _.globs # fromMaybe Glob.emptyGlobs
-          included = null globs.include || Glob.test { include: globs.include, exclude: [] } path
-          excluded = Glob.test { include: globs.exclude, exclude: [] } path
-      in
-        excluded || not included
+      in not Glob.test globs path

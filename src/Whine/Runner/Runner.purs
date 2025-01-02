@@ -2,6 +2,7 @@ module Whine.Runner where
 
 import Whine.Runner.Prelude
 
+import Data.Array.NonEmpty as NEA
 import Effect.Class.Console as Console
 import Node.Process (exit')
 import Record (merge)
@@ -22,13 +23,13 @@ runWhineAndPrintResultsAndExit factories = launchAff_ do
 
   let env = { logLevel: Cli.determineLogLevel args }
       main = case args.command of
-        Cli.JustWhine -> do
-          results <- runWhine { factories, configFile: "whine.yaml" }
+        Cli.JustWhine { globs } -> do
+          results <- runWhine { factories, globs, configFile: "whine.yaml" }
           unless args.quiet $
             Console.log `traverse_` (printViolation `mapMaybe` results)
           liftEffect $ exit' if results # any (not _.muted) then 1 else 0
 
-        Cli.LanguageServer checkWhen ->
+        Cli.LanguageServer { checkWhen } ->
           startLanguageServer { factories, configFile: "whine.yaml", checkWhen }
 
   runReaderT main env
@@ -38,10 +39,17 @@ runWhineAndPrintResultsAndExit factories = launchAff_ do
 -- | globs the input files, parses them, and runs the rules through every file.
 runWhine :: ∀ m. MonadEffect m =>
   { factories :: RuleFactories (WriterT (Violations ()) m)
+  , globs :: Maybe (NonEmptyArray NonEmptyString)
   , configFile :: FilePath
   }
   -> m (Violations (WithRule + WithMuted + WithFile + ()))
-runWhine { factories, configFile } = execWriterT do
+runWhine { factories, globs, configFile } = execWriterT do
   config <- mapViolation (merge { muted: false }) $ readConfig factories configFile
-  files <- liftEffect $ glob config.files
+  files <- liftEffect $ glob (globs' config)
   checkFile config.rules `traverse_` files
+  where
+    globs' config =
+      globs
+      <#> NEA.toArray
+      <#> { include: _, exclude: [] }
+      # fromMaybe config.files
