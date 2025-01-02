@@ -21,6 +21,7 @@ package:
     - identity: ">=6.0.0 <7.0.0"
     - json: ">=1.1.0 <2.0.0"
     - language-cst-parser: ">=0.14.0 <0.15.0"
+    - lists: ">=7.0.0 <8.0.0"
     - maybe: ">=6.0.0 <7.0.0"
     - newtype: ">=5.0.0 <6.0.0"
     - node-buffer: ">=9.0.0 <10.0.0"
