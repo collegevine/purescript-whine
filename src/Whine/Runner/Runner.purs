@@ -3,7 +3,10 @@ module Whine.Runner where
 import Whine.Runner.Prelude
 
 import Data.Array.NonEmpty as NEA
+import Data.String.NonEmpty as NES
 import Effect.Class.Console as Console
+import Node.FS.Stats as Stats
+import Node.FS.Sync as NodeFS
 import Node.Process (exit')
 import Record (merge)
 import Whine (checkFile)
@@ -45,7 +48,7 @@ runWhine :: ∀ m. MonadEffect m =>
   -> m (Violations (WithRule + WithMuted + WithFile + ()))
 runWhine { factories, globs, configFile } = execWriterT do
   config <- mapViolation (merge { muted: false }) $ readConfig factories configFile
-  files <- liftEffect $ glob (globs' config)
+  files <- gatherFiles (globs' config)
   checkFile config.rules `traverse_` files
   where
     globs' config =
@@ -53,3 +56,15 @@ runWhine { factories, globs, configFile } = execWriterT do
       <#> NEA.toArray
       <#> { include: _, exclude: [] }
       # fromMaybe config.files
+
+    gatherFiles globses = liftEffect do
+      globbed <- glob globses
+      { yes: directories, no: files } <-
+        globbed
+        # traverse (\f -> (f /\ _) <$> NodeFS.stat f)
+        <#> partition (snd >>> Stats.isDirectory)
+      withinDirectories <- glob
+        { include: directories <#> fst <#> (_ <> "/**/*.purs") # mapMaybe NES.fromString
+        , exclude: []
+        }
+      pure $ nub $ (fst <$> files) <> withinDirectories
