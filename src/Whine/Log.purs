@@ -3,8 +3,12 @@ module Whine.Log where
 import Whine.Prelude
 
 import Codec.JSON.DecodeError as DecodeError
+import Data.DateTime (DateTime)
+import Data.Formatter.DateTime as Format
+import Data.List as List
 import Effect.Class.Console as Console
 import Effect.Exception as Err
+import Effect.Now (nowDateTime)
 
 class Loggable a where
   toDoc :: a -> String
@@ -31,10 +35,15 @@ logDefault { level, severity } message = do
     printFn $ toDoc message
   where
     printFn = case severity of
-      LogDebug -> Console.debug
-      LogInfo -> Console.info
-      LogWarning -> Console.warn
-      LogError -> Console.error
+      LogInfo ->
+        Console.info
+      LogWarning ->
+        Console.warn
+      LogError ->
+        Console.error
+      LogDebug -> \s -> do
+        now <- liftEffect nowDateTime
+        Console.debug $ fold ["[", formatDebugTime now, "]: ", s]
 
 logDebug :: ∀ m a. MonadLog m => Loggable a => a -> m Unit
 logDebug = log LogDebug
@@ -47,3 +56,14 @@ logWarning = log LogWarning
 
 logError :: ∀ m a. MonadLog m => Loggable a => a -> m Unit
 logError = log LogError
+
+formatDebugTime :: DateTime -> String
+formatDebugTime = Format.format $ List.fromFoldable
+  [ Format.Hours24
+  , Format.Placeholder ":"
+  , Format.MinutesTwoDigits
+  , Format.Placeholder ":"
+  , Format.SecondsTwoDigits
+  , Format.Placeholder "."
+  , Format.Milliseconds
+  ]

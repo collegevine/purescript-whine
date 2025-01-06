@@ -13,6 +13,7 @@ import PureScript.CST.Traversal as T
 import PureScript.CST.Types (Expr(..), Module(..), ModuleHeader(..), Separated(..), Wrapped(..))
 import PureScript.CST.Types as CST
 import Record (merge)
+import Whine.Log (logDebug)
 import Whine.Muting (MutedRange(..), mutedRanges)
 import Whine.Runner.Config (RuleSet)
 import Whine.Runner.Glob as Glob
@@ -98,13 +99,16 @@ checkFile rules path = do
 -- | conditions are reported as linter violations, rather than a big loud crash.
 checkModule :: ∀ m. MonadEffect m => RuleSet -> { path :: FilePath, text :: String } -> WhineM (WithRule + WithMuted + WithFile + ()) m Unit
 checkModule rules { path, text } =
-  mapViolations addMutedAndFile
+  mapViolations addMutedAndFile do
+    logDebug $ "Parsing " <> path
     case parseModule text of
       ParseFailed _ ->
         reportViolation { rule: "", source: Nothing, message: "Failed to parse the file" }
-      ParseSucceededWithErrors m _ ->
+      ParseSucceededWithErrors m _ -> do
+        logDebug $ "Parsed " <> path <> ", running rules"
         runRules rules m
-      ParseSucceeded m ->
+      ParseSucceeded m -> do
+        logDebug $ "Parsed " <> path <> ", running rules"
         runRules rules m
   where
     addMutedAndFile v = v # merge

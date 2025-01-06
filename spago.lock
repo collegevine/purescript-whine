@@ -51,10 +51,12 @@
             "exceptions",
             "exists",
             "exitcodes",
+            "fixed-points",
             "foldable-traversable",
             "foreign",
             "foreign-object",
             "fork",
+            "formatters",
             "free",
             "functions",
             "functors",
@@ -186,6 +188,7 @@
             {
               "foreign-object": ">=4.1.0 <5.0.0"
             },
+            "formatters",
             {
               "functions": ">=6.0.0 <7.0.0"
             },
@@ -282,9 +285,11 @@
             "exceptions",
             "exists",
             "exitcodes",
+            "fixed-points",
             "foldable-traversable",
             "foreign",
             "foreign-object",
+            "formatters",
             "free",
             "functions",
             "functors",
@@ -316,6 +321,7 @@
             "ordered-collections",
             "orders",
             "parallel",
+            "parsing",
             "partial",
             "posix-types",
             "prelude",
@@ -335,6 +341,7 @@
             "typelevel-prelude",
             "undefined-is-not-a-problem",
             "unfoldable",
+            "unicode",
             "unsafe-coerce",
             "untagged-union",
             "variant",
@@ -385,9 +392,11 @@
             "exceptions",
             "exists",
             "exitcodes",
+            "fixed-points",
             "foldable-traversable",
             "foreign",
             "foreign-object",
+            "formatters",
             "free",
             "functions",
             "functors",
@@ -419,6 +428,7 @@
             "ordered-collections",
             "orders",
             "parallel",
+            "parsing",
             "partial",
             "posix-types",
             "prelude",
@@ -438,6 +448,7 @@
             "typelevel-prelude",
             "undefined-is-not-a-problem",
             "unfoldable",
+            "unicode",
             "unsafe-coerce",
             "untagged-union",
             "variant",
@@ -1319,6 +1330,17 @@
         "enums"
       ]
     },
+    "fixed-points": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-hTl5fzeG4mzAOFzEzAeNH7kJvJgYCH7x3v2NdX9pOE4=",
+      "dependencies": [
+        "exists",
+        "newtype",
+        "prelude",
+        "transformers"
+      ]
+    },
     "foldable-traversable": {
       "type": "registry",
       "version": "6.0.0",
@@ -1378,6 +1400,20 @@
       "integrity": "sha256-X7u0SuCvFbLbzuNEKLBNuWjmcroqMqit4xEzpQwAP7E=",
       "dependencies": [
         "aff"
+      ]
+    },
+    "formatters": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-5JaC9d2p0xoqJWjWxlHH19R4iJwFTBr4j7SlYcLgicE=",
+      "dependencies": [
+        "datetime",
+        "fixed-points",
+        "lists",
+        "numbers",
+        "parsing",
+        "prelude",
+        "transformers"
       ]
     },
     "free": {
