@@ -16,11 +16,12 @@ import Record (merge)
 import Whine.Muting (MutedRange(..), mutedRanges)
 import Whine.Runner.Config (RuleSet)
 import Whine.Runner.Glob as Glob
-import Whine.Types (Handle(..), Violations, WithFile, WithMuted, WithRule, mapViolation)
+import Whine.Types (Handle(..), Rule, WithFile, WithMuted, WithRule, reportViolation)
+import WhineM (WhineM, mapViolations)
 
 -- | Given a parsed PS module, runs all the rules on it. The rules report
 -- | violations via Writer side-effects.
-runRules :: ∀ m e. Monad m => RangeOf e => RuleSet (WriterT (Violations ()) m) -> Module e -> WriterT (Violations (WithRule + ())) m Unit
+runRules :: ∀ m e. MonadEffect m => RangeOf e => RuleSet -> Module e -> WhineM (WithRule + ()) m Unit
 runRules rs mdl = void do
   onModule mdl
   traverseModule visitor mdl
@@ -32,11 +33,11 @@ runRules rs mdl = void do
       , onType: \x -> allRules _.onType x *> traverseType visitor x
       }
 
-    allRules :: ∀ x. (_ -> Handle x _) -> x e -> _
+    allRules :: ∀ x. (Rule -> Handle x) -> x e -> _
     allRules f x =
       forWithIndex_ rs \rid { rule } ->
         let (Handle h) = f rule
-        in h x # mapViolation (merge { rule: rid })
+        in mapViolations (merge { rule: rid }) (h x)
 
     onModule :: Module e -> _
     onModule m@(Module { header: ModuleHeader header }) = do
@@ -53,7 +54,7 @@ runRules rs mdl = void do
     ---   https://github.com/natefaubion/purescript-language-cst-parser/pull/59
     -------------------------------------------------------------------------------------------------
     traverseExpr'
-      :: forall ee f r
+      :: ∀ ee f r
       . Applicative f
       => { onBinder :: T.Rewrite ee f CST.Binder, onExpr :: T.Rewrite ee f CST.Expr, onType :: T.Rewrite ee f CST.Type | r }
       -> T.Rewrite ee f CST.Expr
@@ -62,7 +63,7 @@ runRules rs mdl = void do
       anotherExpr -> traverseExpr k anotherExpr
 
     traverseSpine
-      :: forall ee f r
+      :: ∀ ee f r
       . Applicative f
       => { onBinder :: T.Rewrite ee f CST.Binder, onExpr :: T.Rewrite ee f CST.Expr, onType :: T.Rewrite ee f CST.Type | r }
       -> T.Rewrite ee f (CST.AppSpine CST.Expr)
@@ -75,19 +76,18 @@ runRules rs mdl = void do
 
 -- | Given a file path, reads the file, then passes it to `checkModule` (see
 -- | comments there).
-checkFile :: forall m. MonadEffect m => RuleSet (WriterT (Violations ()) m) -> FilePath -> WriterT (Violations (WithRule + WithMuted + WithFile + ())) m Unit
+checkFile :: ∀ m. MonadEffect m => RuleSet -> FilePath -> WhineM (WithRule + WithMuted + WithFile + ()) m Unit
 checkFile rules path = do
   eText <- liftEffect $ try $ readTextFile UTF8 path
   case eText of
     Left err ->
-      tell
-        [ { message: "Failed to read the file: " <> Err.message err
-          , source: Nothing
-          , muted: false
-          , rule: ""
-          , file: { path, lines: Nothing }
-          }
-        ]
+      reportViolation
+        { message: "Failed to read the file: " <> Err.message err
+        , source: Nothing
+        , muted: false
+        , rule: ""
+        , file: { path, lines: Nothing }
+        }
     Right text ->
       checkModule rules { path, text }
 
@@ -96,15 +96,12 @@ checkFile rules path = do
 -- | muting directives in the file itself as well as include/exclude globs in
 -- | each rule's config. If reading the file or parsing it fails, those
 -- | conditions are reported as linter violations, rather than a big loud crash.
-checkModule :: forall m. MonadEffect m =>
-  RuleSet (WriterT (Violations ()) m)
-  -> { path :: FilePath, text :: String }
-  -> WriterT (Violations (WithRule + WithMuted + WithFile + ())) m Unit
+checkModule :: ∀ m. MonadEffect m => RuleSet -> { path :: FilePath, text :: String } -> WhineM (WithRule + WithMuted + WithFile + ()) m Unit
 checkModule rules { path, text } =
-  mapViolation addMutedAndFile
+  mapViolations addMutedAndFile
     case parseModule text of
       ParseFailed _ ->
-        tell [{ rule: "", source: Nothing, message: "Failed to parse the file" }]
+        reportViolation { rule: "", source: Nothing, message: "Failed to parse the file" }
       ParseSucceededWithErrors m _ ->
         runRules rules m
       ParseSucceeded m ->

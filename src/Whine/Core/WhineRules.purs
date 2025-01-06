@@ -7,9 +7,9 @@ import Data.Codec.JSON as CJ
 import Whine.Core.UndesirableModules as UndesirableModules
 import Whine.Core.CaseBranchIndentation as CaseBranchIndentation
 import Whine.Core.CommaFirstArrays as CommaFirstArrays
-import Whine.Types (class MonadRules, RuleFactories, ruleFactory)
+import Whine.Types (RuleFactories, ruleFactory)
 
-rules :: ∀ m. MonadRules m => RuleFactories m
+rules :: RuleFactories
 rules =
   [ ruleFactory "UndesirableModules" UndesirableModules.codec UndesirableModules.rule
   , ruleFactory "CommaFirstArrays" CJ.json CommaFirstArrays.rule

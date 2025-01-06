@@ -1,9 +1,8 @@
-module Whine.Runner.Log where
+module Whine.Log where
 
 import Whine.Prelude
 
 import Codec.JSON.DecodeError as DecodeError
-import Control.Monad.Reader (class MonadReader, asks)
 import Effect.Class.Console as Console
 import Effect.Exception as Err
 
@@ -23,20 +22,19 @@ data LogSeverity = LogDebug | LogInfo | LogWarning | LogError
 derive instance Eq LogSeverity
 derive instance Ord LogSeverity
 
-class MonadEffect m <= MonadLog m where
+class MonadLog m where
   log :: ∀ a. Loggable a => LogSeverity -> a -> m Unit
 
-instance (MonadEffect m, MonadReader { logLevel :: LogSeverity | r } m) => MonadLog m where
-  log severity message = do
-    level <- asks _.logLevel
-    when (severity >= level) $
-      printFn $ toDoc message
-    where
-      printFn = case severity of
-        LogDebug -> Console.debug
-        LogInfo -> Console.info
-        LogWarning -> Console.warn
-        LogError -> Console.error
+logDefault :: ∀ m a. MonadEffect m => Loggable a => { level :: LogSeverity, severity :: LogSeverity } -> a -> m Unit
+logDefault { level, severity } message = do
+  when (severity >= level) $
+    printFn $ toDoc message
+  where
+    printFn = case severity of
+      LogDebug -> Console.debug
+      LogInfo -> Console.info
+      LogWarning -> Console.warn
+      LogError -> Console.error
 
 logDebug :: ∀ m a. MonadLog m => Loggable a => a -> m Unit
 logDebug = log LogDebug

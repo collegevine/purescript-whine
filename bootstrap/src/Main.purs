@@ -19,6 +19,7 @@ import Whine.Runner.Cli as Cli
 import Whine.Runner.Config as Config
 import Whine.Runner.FS as FS
 import Whine.Runner.Yaml as Yaml
+import WhineM (runWhineM)
 
 type Env = { logLevel :: LogSeverity }
 
@@ -32,7 +33,7 @@ main = launchAff_ do
 
   let env = { logLevel: Cli.determineLogLevel args }
 
-  runReaderT entryPoint env
+  void $ runWhineM env entryPoint
 
 entryPoint :: RunnerM Unit
 entryPoint = do

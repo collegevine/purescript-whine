@@ -26,22 +26,21 @@ import Whine.Prelude
 import Data.Array.NonEmpty as NEA
 import PureScript.CST.Range (rangeOf)
 import PureScript.CST.Types (Expr(..), Separated(..))
-import Whine.Types (class MonadRules, Handle(..), Rule, emptyRule)
+import Whine.Types (Handle(..), Rule, emptyRule, reportViolation)
 
-rule :: ∀ m. MonadRules m => JSON -> Rule m
+rule :: JSON -> Rule
 rule _ = emptyRule { onExpr = onExpr }
   where
-    onExpr :: Handle Expr m
+    onExpr :: Handle Expr
     onExpr = Handle case _ of
       e@(ExprCase { branches }) -> do
         let { yes, no } = NEA.partition isOneLine branches
             consistentIndent = null yes || null no
         unless consistentIndent $
-          tell
-          [ { source: Just $ rangeOf e
+          reportViolation
+            { source: Just $ rangeOf e
             , message: "Inconsistent indentation in case branches: keep either all single-line or all multi-line"
             }
-          ]
         where
           isOneLine (Separated { head } /\ body) = (rangeOf head).start.line == (rangeOf body).end.line
 

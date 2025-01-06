@@ -2,7 +2,6 @@ module Whine.Runner.LanguageServer where
 
 import Whine.Runner.Prelude
 
-import Control.Monad.Writer (runWriterT)
 import Data.String as String
 import Node.Path as NodePath
 import Record (merge)
@@ -16,15 +15,17 @@ import Whine (checkModule)
 import Whine.Runner.Cli (CheckFileWhen(..))
 import Whine.Runner.Config (readConfig)
 import Whine.Runner.Glob as Glob
-import Whine.Types (RuleFactories, Violations, mapViolation)
+import Whine.Types (RuleFactories)
+import WhineM (mapViolations, runWhineM, unliftWhineM)
 
 startLanguageServer ::
-  { factories :: RuleFactories (WriterT (Violations ()) RunnerM)
+  { factories :: RuleFactories
   , configFile :: FilePath
   , checkWhen :: CheckFileWhen
   }
   -> RunnerM Unit
 startLanguageServer { factories, configFile, checkWhen } = do
+  env <- ask
   conn <- Conn.createConnection
 
   conn # on Conn.initialize \{} ->
@@ -34,10 +35,10 @@ startLanguageServer { factories, configFile, checkWhen } = do
   -- TODO: reload config on change
   config /\ _configErrors <-
     readConfig factories configFile
-    # mapViolation (merge { muted: false })
-    # runWriterT
+    # mapViolations (merge { muted: false })
+    # runWhineM env
 
-  checkDocument <- unliftRunnerM \document -> do
+  checkDocument <- unliftWhineM \document -> do
     let uri = Doc.uri document
         path = uri # String.stripPrefix (Pattern "file://") <#> NodePath.relative (NodePath.dirname configFile) # fromMaybe ""
 
@@ -45,7 +46,7 @@ startLanguageServer { factories, configFile, checkWhen } = do
       logDebug $ "Checking file: URI=" <> Doc.uri document <> ", path=" <> path
 
       text <- Doc.getText document
-      violations <- execWriterT $ checkModule config.rules { path, text }
+      _ /\ violations <- runWhineM env $ checkModule config.rules { path, text }
       let liveViolations = violations # filter (not _.muted)
 
       logDebug $ fold

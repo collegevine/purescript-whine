@@ -162,7 +162,7 @@ cachedBundleMainModule { moduleName, ruleModules } = String.joinWith "\n"
   ]
   where
     ruleModuleImports = ruleModules <#> \modul -> "import " <> modul <> " as " <> modul
-    ruleModuleAccess = ruleModules <#> \modul -> modul <> ".rules :: ∀ m. MonadRules m => RuleFactories m"
+    ruleModuleAccess = ruleModules <#> \modul -> modul <> ".rules :: RuleFactories"
 
 hashConfig :: { rulePackages :: Map { package :: String } PackageSpec } -> String
 hashConfig { rulePackages } = hashString $ fold

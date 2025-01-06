@@ -4,7 +4,6 @@ import Whine.Runner.Prelude
 
 import Codec.JSON.DecodeError as DecodeError
 import Control.Monad.Error.Class (throwError)
-import Control.Monad.Writer (runWriter)
 import Data.Codec as Codec
 import Data.Codec.JSON as CJ
 import Data.Codec.JSON.Common as CJ.Common
@@ -17,23 +16,24 @@ import Node.FS.Sync (readTextFile)
 import Record (merge)
 import Whine.Runner.Glob (Globs)
 import Whine.Runner.Yaml (parseYaml)
-import Whine.Types (RuleFactories, RuleId, Violations, WithFile, WithRule, Rule)
+import Whine.Types (class MonadRules, Rule, RuleFactories, RuleId, WithFile, WithRule, WithMuted, reportViolation)
+import WhineM (WhineM, mapViolations)
 
 data PackageSpec
   = JustPackage
   | PackageVersion String
   | LocalPackage { path :: FilePath, module :: Maybe String }
 
-type Config m =
-  { rules :: RuleSet m
+type Config =
+  { rules :: RuleSet
   , files :: Globs
   }
 
 -- | For every rule ID we have a rule implementation `Rule m` and some common
 -- | config values that can be applied to any rule and are handled by the
 -- | framework.
-type RuleSet m = Map RuleId
-  { rule :: Rule m
+type RuleSet = Map RuleId
+  { rule :: Rule
   , globs :: Globs
   }
 
@@ -70,7 +70,7 @@ type ConfigJson =
 -- | The whole thing runs in a writer monad to which it can report any errors
 -- | while parsing the config. The errors doesn't stop the parsing, but
 -- | erroneous rules do not make it into the resulting map.
-parseRuleConfigs :: ∀ m n. MonadWriter (Violations (WithRule + ())) m => RuleFactories n -> Map String JSON -> m (RuleSet n)
+parseRuleConfigs :: ∀ m. MonadRules (WithRule + ()) m => RuleFactories -> Map String JSON -> m RuleSet
 parseRuleConfigs factories config =
   Map.fromFoldable <$> catMaybes <$>
     for factories \(ruleId /\ factory) -> do
@@ -83,7 +83,7 @@ parseRuleConfigs factories config =
             Right x ->
               pure $ Just x
             Left err -> do
-              tell [{ rule: ruleId, source: Nothing, message: message <> ": " <> err }]
+              reportViolation { rule: ruleId, source: Nothing, message: message <> ": " <> err }
               pure Nothing
 
           commonProp :: ∀ a. String -> CJ.Codec a -> m (Maybe a)
@@ -112,27 +112,28 @@ parseRuleConfigs factories config =
         pure Nothing
 
 -- | Reads config from a given file and parses it.
-readConfig :: ∀ m n. MonadEffect m => MonadWriter (Violations (WithRule + WithFile + ())) m => RuleFactories n -> FilePath -> m (Config n)
+readConfig :: ∀ m. MonadEffect m => RuleFactories -> FilePath -> WhineM (WithRule + WithFile + WithMuted + ()) m Config
 readConfig factories configFile = do
   text <- lmap Err.message <$> liftEffect (try $ readTextFile UTF8 configFile)
 
   config <- case text >>= parseYaml >>= (CJ.decode configCodec >>> lmap DecodeError.print) of
     Left err -> do
-      tell
-        [ { message: "Error reading config: " <> err
-          , source: Nothing
-          , file: { path: configFile, lines: Nothing }
-          , rule: ""
-          }
-        ]
+      reportViolation
+        { message: "Error reading config: " <> err
+        , source: Nothing
+        , file: { path: configFile, lines: Nothing }
+        , muted: false
+        , rule: ""
+        }
       pure defaultConfig
 
     Right c ->
       pure c
 
-  let res /\ violations = runWriter $ parseRuleConfigs factories (config.rules # fromMaybe Map.empty)
+  res <-
+    mapViolations (merge { file: { path: configFile, lines: Nothing }, muted: false })
+      (parseRuleConfigs factories (config.rules # fromMaybe Map.empty))
 
-  tell $ violations <#> merge { file: { path: configFile, lines: Nothing } }
   pure
     { rules: res
     , files:

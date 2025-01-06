@@ -12,16 +12,11 @@ import Control.Monad.Reader (ReaderT, ask, runReaderT) as R
 import Effect.Aff (Aff, launchAff_) as R
 import Effect.Aff.Class (class MonadAff, liftAff) as R
 import Node.Process (exit')
-import Whine.Runner.Log (class Loggable, class MonadLog, LogSeverity(..), log, logDebug, logError, logInfo, logWarning, toDoc) as R
+import Whine.Log (class Loggable, class MonadLog, LogSeverity(..), log, logDebug, logError, logInfo, logWarning, toDoc) as R
+import Whine.Types (WithFile, WithMuted, WithRule)
+import WhineM (WhineM)
 
-type Env = { logLevel :: R.LogSeverity }
-
-type RunnerM = R.ReaderT Env R.Aff
-
-unliftRunnerM :: ∀ a x. (x -> RunnerM a) -> RunnerM (x -> R.Aff a)
-unliftRunnerM f = do
-  env <- R.ask
-  pure \x -> R.liftAff $ R.runReaderT (f x) env
+type RunnerM a = WhineM (WithFile + WithMuted + WithRule + ()) R.Aff a
 
 die :: ∀ err a. R.Loggable err => err -> RunnerM a
 die message = do

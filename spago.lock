@@ -457,7 +457,7 @@
     },
     "package_set": {
       "address": {
-        "registry": "62.1.0"
+        "registry": "62.2.5"
       },
       "compiler": ">=0.15.15 <0.16.0",
       "content": {
@@ -679,7 +679,7 @@
         "justifill": "0.5.0",
         "jwt": "0.0.9",
         "labeled-data": "0.2.0",
-        "language-cst-parser": "0.14.0",
+        "language-cst-parser": "0.14.1",
         "lazy": "6.0.0",
         "lazy-joe": "1.0.0",
         "lcg": "4.0.0",
@@ -964,6 +964,7 @@
         "webextension-polyfill": "0.1.0",
         "webgpu": "0.0.1",
         "which": "2.0.0",
+        "whine-core": "0.0.19",
         "xterm": "1.0.0",
         "yoga-fetch": "1.0.1",
         "yoga-json": "5.1.0",
@@ -1515,8 +1516,8 @@
     },
     "language-cst-parser": {
       "type": "registry",
-      "version": "0.14.0",
-      "integrity": "sha256-GB5HkoWkgsb1xtdchaq7+CerQTVyene5+aR6RsEZv2w=",
+      "version": "0.14.1",
+      "integrity": "sha256-LJzh1ZTaKjcrHx95ZfO2La3w6Xb/IZQT3m2Nuj4n1dM=",
       "dependencies": [
         "arrays",
         "const",

@@ -52,20 +52,19 @@ import Whine.Prelude
 import Data.Foldable (or)
 import PureScript.CST.Range (rangeOf)
 import PureScript.CST.Types (Expr(..), Separated(..), Wrapped(..))
-import Whine.Types (class MonadRules, Handle(..), Rule, emptyRule)
+import Whine.Types (Handle(..), Rule, emptyRule, reportViolation)
 
-rule :: ∀ m. MonadRules m => JSON -> Rule m
+rule :: JSON -> Rule
 rule _ = emptyRule { onExpr = onExpr }
   where
-    onExpr :: Handle Expr m
+    onExpr :: Handle Expr
     onExpr = Handle case _ of
       ExprArray (Wrapped { open, value: Just (Separated items), close }) -> do
         when (multiLine && (anyMisalignedPrefixes || not correctCloseBracket)) $
-          tell
-          [ { source: Just { start: open.range.start, end: close.range.end }
+          reportViolation
+            { source: Just { start: open.range.start, end: close.range.end }
             , message: "Prefer comma-first style in array literals, items aligned vertically"
             }
-          ]
         where
           multiLine = open.range.start.line /= close.range.end.line
           lastItem = last items.tail <#> snd # fromMaybe items.head
