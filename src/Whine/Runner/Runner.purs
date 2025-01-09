@@ -27,9 +27,9 @@ runWhineAndPrintResultsAndExit factories = launchAff_ do
   let env = { logLevel: Cli.determineLogLevel args }
 
   case args.command of
-    Cli.JustWhine { globs } -> do
+    Cli.JustWhine justWhineArgs@{ globs } -> do
       results <- runWhine { factories, globs, configFile: "whine.yaml", env }
-      let output = printViolation `mapMaybe` results
+      let output = nub $ printViolation justWhineArgs `mapMaybe` results
       unless args.quiet do
         Console.log `traverse_` output
         when (null output) $ Console.log "No violations found."

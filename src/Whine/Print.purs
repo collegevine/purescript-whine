@@ -6,19 +6,23 @@ import Ansi.Codes (Color(..))
 import Ansi.Output (foreground, withGraphics)
 import Data.String as String
 import Data.String.Utils (padStart')
+import Whine.Runner.Cli (OutputFormat(..))
 import Whine.Types (Violation, WithFile, WithMuted, WithRule)
 
-printViolation :: Violation (WithRule + WithMuted + WithFile + ()) -> Maybe String
-printViolation { muted: true } = Nothing
-printViolation { source, message, rule, file } = Just text
+type Args r = { outputFormat :: OutputFormat | r }
+
+printViolation :: ∀ r. Args r -> Violation (WithRule + WithMuted + WithFile + ()) -> Maybe String
+printViolation _ { muted: true } = Nothing
+printViolation args { source, message, rule, file } = Just text
   where
-    text = fold
-      [ withGraphics (foreground Cyan) file.path, ":"
-      , locationText
-      , withGraphics (foreground Red) rule, ": "
-      , message, "\n"
-      , withGraphics (foreground BrightYellow) sourceText
-      ]
+    text =
+      case args.outputFormat of
+        Short -> fileLocation <> " " <> ruleAndMessage
+        Long -> fileLocation <> " " <> ruleAndMessage <> "\n" <> sourceCode
+      where
+        fileLocation = fold [withGraphics (foreground Cyan) file.path, ":", locationText]
+        ruleAndMessage = fold [withGraphics (foreground Red) rule, ": ", message]
+        sourceCode = withGraphics (foreground BrightYellow) sourceText
 
     indent = "  "
 

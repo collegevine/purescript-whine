@@ -1,6 +1,6 @@
 {
   "name": "whine",
-  "version": "0.0.21",
+  "version": "0.0.22",
   "description": "PureScript linter, extensible, with configurable rules, and one-off escape hatches",
   "keywords": ["purescript", "lint"],
   "author": "Fyodor Soikin <name.fa@gmail.com>",

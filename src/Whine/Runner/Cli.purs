@@ -19,11 +19,16 @@ data Command
   = JustWhine JustWhineArgs
   | LanguageServer LanguagServerArgs
 
-type JustWhineArgs = { globs :: Maybe (NonEmptyArray NonEmptyString) }
+type JustWhineArgs =
+  { globs :: Maybe (NonEmptyArray NonEmptyString)
+  , outputFormat :: OutputFormat
+  }
 
 type LanguagServerArgs = { checkWhen :: CheckFileWhen }
 
 data CheckFileWhen = CheckOnSave | CheckOnChange
+
+data OutputFormat = Short | Long
 
 parseCliArgs :: ∀ m. MonadEffect m => m Args
 parseCliArgs = liftEffect $
@@ -47,8 +52,10 @@ justWhineArgsParser = ado
     [ O.metavar "GLOB"
     , O.help "Glob patterns to match files to lint. When empty, all files are linted."
     ]
+  outputFormat <- outputFormatOption
   in
     { globs: NEA.fromFoldable $ List.mapMaybe NES.fromString args
+    , outputFormat: fromMaybe Long outputFormat
     }
 
 languageServerArgsParser :: O.Parser LanguagServerArgs
@@ -92,12 +99,18 @@ quietFlag =
     , O.help "Print no output"
     ]
 
-languageServerFlag :: O.Parser Boolean
-languageServerFlag =
-  O.switch $ fold
-    [ O.long "language-server"
-    , O.help "Start Whine as a language server"
+outputFormatOption :: O.Parser (Maybe OutputFormat)
+outputFormatOption =
+  OT.optional $ O.option parseOutputFormat $ fold
+    [ O.long "output"
+    , O.short 'o'
+    , O.help "Output format. Possible values are 'short' and 'long'. Default is 'long'."
     ]
+  where
+    parseOutputFormat = O.eitherReader \s -> do
+      if s == "short" then Right Short
+      else if s == "long" then Right Long
+      else Left $ "Invalid output format: " <> s
 
 determineLogLevel :: Args -> LogSeverity
 determineLogLevel args =
