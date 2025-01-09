@@ -15,13 +15,14 @@ import JSON as JSON
 import Node.FS.Sync (readTextFile)
 import Record (merge)
 import Whine.Runner.Glob (Globs)
+import Whine.Runner.PackageVersion (Version, formatVersion, parseVersion)
 import Whine.Runner.Yaml (parseYaml)
 import Whine.Types (class MonadRules, Rule, RuleFactories, RuleId, WithFile, WithRule, WithMuted, reportViolation)
 import WhineM (WhineM, mapViolations)
 
 data PackageSpec
   = JustPackage
-  | PackageVersion String
+  | PackageVersion Version
   | LocalPackage { path :: FilePath, module :: Maybe String }
 
 type Config =
@@ -156,7 +157,7 @@ packagesCodec = dimap Map.toUnfoldable Map.fromFoldable $ CJ.array packageCodec
     packageCodec = Codec.codec' dec enc
       where
         enc ({ package } /\ JustPackage) = Codec.encode CJ.string package
-        enc ({ package } /\ PackageVersion v) = Codec.encode (CJ.Common.strMap CJ.string) $ Map.singleton package v
+        enc ({ package } /\ PackageVersion v) = Codec.encode (CJ.Common.strMap CJ.string) $ Map.singleton package (formatVersion v)
         enc ({ package } /\ LocalPackage p) = Codec.encode localPackageCodec $ Map.singleton package { local: p.path, module: p.module }
 
         dec json = justPackage <|> withVersion <|> localPackage
@@ -168,8 +169,12 @@ packagesCodec = dimap Map.toUnfoldable Map.fromFoldable $ CJ.array packageCodec
             withVersion = do
               m <- Codec.decode (CJ.Common.strMap CJ.string) json
               case Map.toUnfoldable m of
-                [package /\ version] -> pure $ { package } /\ PackageVersion version
-                _ -> throwError $ DecodeError.basic "Malformed package specification"
+                [package /\ version] ->
+                  case parseVersion version of
+                    Right v -> pure $ { package } /\ PackageVersion v
+                    Left err -> throwError $ DecodeError.basic err
+                _ ->
+                  throwError $ DecodeError.basic "Malformed package specification"
 
             localPackage = do
               m <- Codec.decode localPackageCodec json

@@ -7,12 +7,13 @@ import Whine.Runner.Prelude
 
 import Codec.JSON.DecodeError as DecodeError
 import Data.Map as Map
+import Data.Tuple (uncurry)
 import Effect.Class.Console as Console
 import Node.ChildProcess.Types as StdIO
 import Node.Process (argv)
 import Node.Process as Node
 import Spago.Generated.BuildInfo as BuildInfo
-import Whine.Bootstrap.Cache (cacheDir, hashConfig, rebuildCache)
+import Whine.Bootstrap.Cache (cacheDir, hashConfig, rebuildCache, whineCorePackage)
 import Whine.Bootstrap.Execa (execa)
 import Whine.Bootstrap.JsonCodecs as J
 import Whine.Runner.Cli as Cli
@@ -40,8 +41,15 @@ entryPoint = do
   configText <- FS.readFile "whine.yaml"
   config <- configText # Yaml.parseYaml # lmap DecodeError.basic >>= J.decode Config.configCodec # rightOrDie
 
-  let rulePackages = Map.union config.rulePackages $ Map.singleton { package: "whine-core" } Config.JustPackage
-      configHash = hashConfig { rulePackages }
+  let rulePackages =
+        -- If whine-core is specified in config, but without a version, assume the "current" version.
+        case Map.lookup (fst whineCorePackage) config.rulePackages of
+          Just Config.JustPackage ->
+            config.rulePackages # uncurry Map.insert whineCorePackage
+          _ ->
+            config.rulePackages
+
+  let configHash = hashConfig { rulePackages }
       bundleFile = "bundle-" <> configHash <> ".mjs"
       bundlePath = cacheDir <> "/" <> bundleFile
 

@@ -2,6 +2,7 @@ module Whine.Bootstrap.Cache
   ( cacheDir
   , hashConfig
   , rebuildCache
+  , whineCorePackage
   )
   where
 
@@ -10,15 +11,19 @@ import Whine.Runner.Prelude
 import Codec.JSON.DecodeError as DecodeError
 import Control.Monad.Reader (asks)
 import Data.Map as Map
+import Data.Maybe (fromJust)
 import Data.String as String
+import Data.Tuple (uncurry)
 import JSON as JSON
 import Node.ChildProcess.Types as StdIO
+import Partial.Unsafe (unsafePartial)
 import Spago.Generated.BuildInfo as BuildInfo
 import Whine.Bootstrap.Execa (execResultSuccessOrDie, execSuccessOrDie_, execa)
 import Whine.Bootstrap.Hash (hashString)
 import Whine.Bootstrap.JsonCodecs as J
 import Whine.Runner.Config (PackageSpec(..))
 import Whine.Runner.FS as FS
+import Whine.Runner.PackageVersion (formatVersion, formatVersionRange, parseVersion, versionToRange)
 import Whine.Runner.Yaml as Yaml
 
 cacheDir = ".whine" :: String
@@ -34,6 +39,7 @@ rebuildCache { rulePackages, bundleFile } = do
 
   let mainModule = "Main"
       packageName = "whine-cached-bootstrap"
+      dependencies = Map.union rulePackages (uncurry Map.singleton whineCorePackage)
 
   FS.mkDirP (cacheDir <> "/src")
   FS.writeFile (cacheDir <> "/package.json") "{}"
@@ -41,10 +47,10 @@ rebuildCache { rulePackages, bundleFile } = do
     { package:
       { name: packageName
       , dependencies:
-          (Map.toUnfoldable rulePackages :: Array _) <#> \({ package } /\ spec) ->
+          (Map.toUnfoldable dependencies :: Array _) <#> \({ package } /\ spec) ->
             Map.singleton package case spec of
               JustPackage -> "*"
-              PackageVersion v -> v
+              PackageVersion v -> formatVersionRange $ versionToRange v
               LocalPackage _ -> "*"
       , bundle:
         { module: mainModule
@@ -147,6 +153,11 @@ rebuildCache { rulePackages, bundleFile } = do
 
       pure res.stdout
 
+whineCorePackage :: { package :: String } /\ PackageSpec
+whineCorePackage = { package: "whine-core" } /\ PackageVersion version
+  where
+    version = unsafePartial $ fromJust $ hush $
+      parseVersion BuildInfo.packages."whine-core"
 
 cachedBundleMainModule :: { moduleName :: String, ruleModules :: Array String } -> String
 cachedBundleMainModule { moduleName, ruleModules } = String.joinWith "\n"
@@ -175,7 +186,7 @@ hashConfig { rulePackages } = hashString $ fold
   where
     printPackageSpec = case _ of
       JustPackage -> "*"
-      PackageVersion v -> v
+      PackageVersion v -> formatVersion v
       LocalPackage p -> p.path <> ":" <> fromMaybe "" p.module
 
 type SpagoYaml =
