@@ -5,3 +5,4 @@ output/
 .psc-ide-port
 .psci_modules/
 .whine/
+.spec-results

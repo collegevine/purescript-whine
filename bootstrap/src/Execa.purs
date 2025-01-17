@@ -22,7 +22,6 @@ execResultSuccessOrDie cmd res =
     logDebug $ "STDERR:\n" <> res.stderr <> "\n\n"
     die $ "Error running '" <> cmd <> "'"
 
-
 execSuccessOrDie :: String -> ExecaProcess -> RunnerM ExecaResult
 execSuccessOrDie cmd proc = do
   res <- liftAff proc.getResult

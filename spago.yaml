@@ -46,7 +46,8 @@ package:
     - untagged-union: ">=1.0.0 <2.0.0"
   test:
     main: Test.Main
-    dependencies: []
+    dependencies:
+      - spec-node
   publish:
     version: 0.0.22
     license: MIT

@@ -29,4 +29,5 @@ jobs:
     - run: npx spago build
     - run: dist/bundle.sh
     - run: dist/npm/index.js
+    - run: npx spago test
 
