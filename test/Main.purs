@@ -5,6 +5,7 @@ import Test.Prelude
 import Effect.Aff (launchAff_)
 import Options.Applicative as Opt
 import Record (merge)
+import Test.Core.WhineRules as WhineRules
 import Test.Integration (integrationSpecs)
 import Test.Spec.Reporter (consoleReporter)
 import Test.Spec.Runner.Node (runSpecAndExitProcess')
@@ -21,8 +22,11 @@ main = launchAff_ do
       { defaultConfig: config
       , parseCLIOptions: false
       }
-      [consoleReporter] $
-      integration
+      [consoleReporter]
+      (pureSpecs *> integration)
+  where
+    pureSpecs =
+      WhineRules.spec
 
 type Config = Config.TestRunConfig' (debug :: Boolean, accept :: Boolean)
 

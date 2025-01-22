@@ -45,7 +45,7 @@ integrationSpecs { debug, accept } = do
       it "Respects quiet option" do
         runTest { caseDir: "0-normal", whineArgs: ["--quiet"], expectedOutput: "quiet.txt" }
 
-      it "Respects globs provided option" do
+      it "Respects provided globs" do
         runTest { caseDir: "0-normal", whineArgs: ["**/*/A.purs"], expectedOutput: "glob-only-a.txt" }
         runTest { caseDir: "0-normal", whineArgs: ["src/nested/**/*.purs"], expectedOutput: "glob-only-nested.txt" }
         runTest { caseDir: "0-normal", whineArgs: ["src/nested/doubly-nested/**/*.purs"], expectedOutput: "glob-only-doubly-nested.txt" }
@@ -116,42 +116,3 @@ pathConcat :: String -> String -> String
 pathConcat a b = a <> "/" <> b
 
 infixl 5 pathConcat as //
-
--- spec :: Spec Unit
--- spec =
---   describe "Integration" do
---     it "should work" do
---       root <- FS.cwd
---       FS.chdir =<< FS.newTempDir
---       FS.writeTextFile "whine.yaml" "rulePackages: [{ whine-core: 0.0.22 }]"
---       FS.writeTextFile "Main.purs" $ joinWith "\n" $ String.trim <$> String.split (Pattern "\n") """
---         module Main where
-
---         x = [1,2,3]
---         y =
---           [ 1
---           , 2
---           ]
---       """
-
---       run "node" [root <> "/dist/npm/index.js"] >>= shouldOutput (joinWith "\n"
---         [ "Please hold on, preparing to whine..."
---         , "Done, ready to whine."
---         , ""
---         , "No violations found."
---         ]
---       )
-
---   where
---     run cmd args = liftAff $
---       execa cmd args identity >>= _.getResult
-
---     shouldOutput expected res
---       | res.exitCode == Just 0 && res.stdout == expected =
---           pure unit
---       | otherwise = do
---           fail $ fold
---             [ "==EXPECTED==\n", expected, "\n\n"
---             , "==STDOUT==\n", res.stdout, "\n\n"
---             , "==STDERR==\n", res.stderr
---             ]

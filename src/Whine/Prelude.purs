@@ -10,7 +10,7 @@ import Control.Monad.Error.Class (try) as Reexport
 import Control.Monad.Except (mapExcept, mapExceptT, runExcept, runExceptT) as Reexport
 import Control.Monad.Writer (class MonadWriter, WriterT, execWriterT, mapWriterT, tell) as Reexport
 
-import Data.Array ((:), (..), (\\), nub, null, cons, drop, elem, filter, length, catMaybes, mapMaybe, last, partition, take, uncons, zip, zipWith) as Reexport
+import Data.Array ((!!), (:), (..), (\\), nub, null, cons, drop, dropWhile, elem, filter, length, catMaybes, mapMaybe, last, partition, take, uncons, zip, zipWith) as Reexport
 import Data.Array.NonEmpty (NonEmptyArray) as Reexport
 import Data.Bifunctor (bimap, lmap, rmap) as Reexport
 import Data.Either (Either(..), fromRight, either, hush, note) as Reexport
