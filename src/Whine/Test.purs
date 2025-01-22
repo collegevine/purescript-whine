@@ -1,6 +1,6 @@
 module Whine.Test where
 
-import Test.Prelude
+import Whine.Prelude
 
 import Control.Monad.Error.Class (class MonadThrow, throwError)
 import Data.Map as Map
@@ -9,7 +9,6 @@ import Data.String.CodeUnits as StringCU
 import Data.String.Utils as StringU
 import Effect.Exception (Error, error)
 import PureScript.CST (RecoveredParserResult(..), parseModule)
-import Test.Spec.Assertions (fail)
 import Whine (runRules)
 import Whine.Log as Log
 import Whine.Runner.Glob (emptyGlobs)
@@ -47,8 +46,8 @@ runRule' :: ∀ m. MonadEffect m => MonadThrow Error m =>
 runRule' args = do
   _ /\ violations <- runWhineM { logLevel: Log.LogInfo }
     case parseModule mod of
-      ParseFailed _ -> fail "Failed to parse"
-      ParseSucceededWithErrors _ _ -> fail "Failed to parse"
+      ParseFailed _ -> throwError $ error "Failed to parse"
+      ParseSucceededWithErrors _ _ -> throwError $ error "Failed to parse"
       ParseSucceeded m -> runRules ruleSet m
   pure $ violations <#> \r ->
     { source: shiftSource <$> r.source, message: r.message }
