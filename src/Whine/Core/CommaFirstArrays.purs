@@ -60,15 +60,14 @@ rule _ = emptyRule { onExpr = onExpr }
     onExpr :: Handle Expr
     onExpr = Handle case _ of
       ExprArray (Wrapped { open, value: Just (Separated items), close }) -> do
-        when (multiLine && (anyMisalignedPrefixes || not correctCloseBracket)) $
+        for_ (mergeRanges violations) \range ->
           reportViolation
-            { source: Just { start: open.range.start, end: close.range.end }
-            , message: "Prefer comma-first style in array literals, items aligned vertically"
+            { source: Just range
+            , message: "Format array literals comma-first, align items vertically"
             }
         where
           multiLine = open.range.start.line /= close.range.end.line
           lastItem = last items.tail <#> snd # fromMaybe items.head
-          correctCloseBracket = close.range.start.line > (rangeOf lastItem).end.line
 
           firstItem = open /\ items.head
           newLineStartingItems = firstItem : do
@@ -76,14 +75,31 @@ rule _ = emptyRule { onExpr = onExpr }
             guard $ (rangeOf prevItem).end.line < (rangeOf nextItem).start.line
             pure $ nextComma /\ nextItem
 
-          anyMisalignedPrefixes =
-            newLineStartingItems # any \(prefix /\ item) ->
-              or
+          violations
+            | multiLine = misalignedPrefixes <> closeBracket
+            | otherwise = []
+
+          closeBracket = do
+            guard $ or
+              [ close.range.start.line /= (rangeOf lastItem).end.line + 1
+              , close.range.start.column /= open.range.start.column
+              ]
+            pure
+              { start: (rangeOf lastItem).end
+              , end: close.range.end
+              }
+
+          misalignedPrefixes = do
+            prefix /\ item <- newLineStartingItems
+            guard $ or
               [ prefix.range.end.line /= (rangeOf item).start.line
               , prefix.range.end.column /= (rangeOf item).start.column - 1
               , prefix.range.start.column /= open.range.start.column
-              , open.range.start.column /= close.range.start.column
               ]
+            pure
+              { start: prefix.range.start
+              , end: (rangeOf item).end
+              }
 
       _ ->
         pure unit

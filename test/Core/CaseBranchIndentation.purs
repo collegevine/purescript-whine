@@ -9,10 +9,10 @@ import Whine.Core.CaseBranchIndentation as CaseBranchIndentation
 import Whine.Test (runRule)
 
 spec :: Spec Unit
-spec = describe "CommaFirstArrays" do
+spec = describe "CaseBranchIndentation" do
 
   it "Reports inconsistent indentation" $
-    hasViolations ["0:4-3:5"] """
+    hasViolations ["1:2-1:8"] """
       x = case a of
         b -> c
         d ->
@@ -20,7 +20,7 @@ spec = describe "CommaFirstArrays" do
     """
 
   it "Reports inconsistent guards" $
-    hasViolations ["0:4-5:8","7:4-12:5"] """
+    hasViolations ["2:4-3:9","11:2-12:5"] """
       x = case a of
         b
           | x ->
@@ -34,6 +34,36 @@ spec = describe "CommaFirstArrays" do
           | y -> c
         d ->
           e
+    """
+
+  it "Reports the smallest range that encompasses all violations" $
+    hasViolations ["2:2-8:9"] """
+      x = case a of
+        b -> c
+        d ->
+          e
+        x -> y
+        z
+          | a -> b
+          | c ->
+              d
+          | e -> f
+    """
+
+  it "Reports either just single-lines or just multilines, whichever are in the minority" $
+    hasViolations ["2:2-3:5", "9:2-9:8"] """
+      x = case a of
+        b -> c
+        d ->
+          e
+        x -> y
+
+      y = case b of
+        c ->
+          d
+        e -> f
+        g ->
+          h
     """
 
   it "Allows consistent indentation" $

@@ -1,7 +1,5 @@
-[36msrc/nested/doubly-nested/A.purs[0m:3:5:  [31mCaseBranchIndentation[0m: Inconsistent indentation in case branches: keep either all single-line or all multi-line
+[36msrc/nested/doubly-nested/A.purs[0m:5:3:  [31mCaseBranchIndentation[0m: Inconsistent indentation in case branches: keep either all single-line or all multi-line
 [93m
-    3: f = case 0 of
-    4:   1 -> true
     5:   2 ->
     6:     false
 [0m

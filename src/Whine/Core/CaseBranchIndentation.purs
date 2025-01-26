@@ -33,12 +33,13 @@ rule _ = emptyRule { onExpr = onExpr }
   where
     onExpr :: Handle Expr
     onExpr = Handle case _ of
-      e@(ExprCase { branches }) -> do
+      ExprCase { branches } -> do
         let { yes, no } = partition isOneLine branchesAndGuards
             consistentIndent = null yes || null no
+            smaller = if length yes <= length no then yes else no
         unless consistentIndent $
           reportViolation
-            { source: Just $ rangeOf e
+            { source: mergeRanges $ smaller # concatMap \(head /\ body) -> [head, body]
             , message: "Inconsistent indentation in case branches: keep either all single-line or all multi-line"
             }
         where

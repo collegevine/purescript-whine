@@ -1,6 +1,7 @@
 module Whine.Prelude
   ( module Prelude
   , module Reexport
+  , module Whine.Prelude
   ) where
 
 import Prelude
@@ -10,7 +11,7 @@ import Control.Monad.Error.Class (try) as Reexport
 import Control.Monad.Except (mapExcept, mapExceptT, runExcept, runExceptT) as Reexport
 import Control.Monad.Writer (class MonadWriter, WriterT, execWriterT, mapWriterT, tell) as Reexport
 
-import Data.Array ((!!), (:), (..), (\\), nub, null, cons, drop, dropWhile, elem, filter, length, catMaybes, mapMaybe, last, partition, take, uncons, zip, zipWith) as Reexport
+import Data.Array ((!!), (:), (..), (\\), concatMap, foldl, nub, null, cons, drop, dropWhile, elem, filter, length, catMaybes, mapMaybe, last, partition, take, uncons, zip, zipWith) as Reexport
 import Data.Array.NonEmpty (NonEmptyArray) as Reexport
 import Data.Bifunctor (bimap, lmap, rmap) as Reexport
 import Data.Either (Either(..), fromRight, either, hush, note) as Reexport
@@ -30,7 +31,19 @@ import Data.Tuple.Nested (type (/\), (/\)) as Reexport
 import Effect (Effect) as Reexport
 import Effect.Class (class MonadEffect, liftEffect) as Reexport
 
+import PureScript.CST.Types (SourceRange) as Reexport
+
 import JSON (JSON) as Reexport
 import Node.Encoding (Encoding(..)) as Reexport
 import Node.Path (FilePath) as Reexport
 import Type.Row (type (+)) as Reexport
+
+mergeRanges :: Array Reexport.SourceRange -> Reexport.Maybe Reexport.SourceRange
+mergeRanges = Reexport.foldl go Reexport.Nothing
+  where
+    go Reexport.Nothing r = Reexport.Just r
+    go (Reexport.Just a) b = Reexport.Just { start: min a.start b.start, end: max a.end b.end }
+
+    lt x y = x.line < y.line || (x.line == y.line && x.column < y.column)
+    min x y = if x `lt` y then x else y
+    max x y = if x `lt` y then y else x

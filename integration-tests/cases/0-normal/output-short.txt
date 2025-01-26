@@ -1,4 +1,4 @@
-[36msrc/B.purs[0m:3:5:  [31mCaseBranchIndentation[0m: Inconsistent indentation in case branches: keep either all single-line or all multi-line
-[36msrc/A.purs[0m:9:5:  [31mCommaFirstArrays[0m: Prefer comma-first style in array literals, items aligned vertically
-[36msrc/nested/C.purs[0m:3:5:  [31mCaseBranchIndentation[0m: Inconsistent indentation in case branches: keep either all single-line or all multi-line
-[36msrc/nested/doubly-nested/A.purs[0m:3:5:  [31mCaseBranchIndentation[0m: Inconsistent indentation in case branches: keep either all single-line or all multi-line
+[36msrc/B.purs[0m:5:3:  [31mCaseBranchIndentation[0m: Inconsistent indentation in case branches: keep either all single-line or all multi-line
+[36msrc/A.purs[0m:9:5:  [31mCommaFirstArrays[0m: Format array literals comma-first, align items vertically
+[36msrc/nested/C.purs[0m:5:3:  [31mCaseBranchIndentation[0m: Inconsistent indentation in case branches: keep either all single-line or all multi-line
+[36msrc/nested/doubly-nested/A.purs[0m:5:3:  [31mCaseBranchIndentation[0m: Inconsistent indentation in case branches: keep either all single-line or all multi-line
