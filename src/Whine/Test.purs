@@ -26,8 +26,11 @@ runRule args =
   >>= traverse \r -> do
     args.assertViolationMessage r.message
     case r.source of
-      Just s -> pure $ fold [show s.start.line, ":", show s.start.column, "-", show s.end.line, ":", show s.end.column]
+      Just s -> pure $ formatRange s
       Nothing -> throwError $ error "Expected source range"
+
+formatRange :: SourceRange -> String
+formatRange s = fold [show s.start.line, ":", show s.start.column, "-", show s.end.line, ":", show s.end.column]
 
 moduleText :: String -> String
 moduleText source =
