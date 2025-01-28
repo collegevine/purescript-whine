@@ -23,9 +23,14 @@ excluding files respectively. If `include` is not present, it defaults to
 
 For example:
 
-```
+```yaml
 rulePackages:
   - whine-core
+  - elmish-whine: 1.2.3 # Rule packages may specify an exact version 
+  - halogen-whine: ">=1.0.0 <2.0.0" # Or a range of versions
+  - my-home-rules:
+      local: ./whine-rules # Rule packages may come from the local file system
+      module: My.Home.WhineRules # The module must export a value `rules :: RuleFactories`
 
 exclude:
   - src/LegacyCode/**/*.purs
@@ -33,8 +38,9 @@ exclude:
 
 rules:
   UndesirableModules:
-    Unsafe.Coerce: Do not use unsafe coercions
-    Data.List.Lazy: Do not use lazy lists, use Data.List instead
+    modules:
+      Unsafe.Coerce: Do not use unsafe coercions
+      Data.List.Lazy: Do not use lazy lists, use Data.List instead
 
   CommaFirstArrays:
     exclude:
