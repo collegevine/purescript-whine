@@ -62,6 +62,17 @@ spec = describe "UndesirableFunctions" do
         y = z FN3.fn3
       """
 
+  it "Allows imports from other modules" do
+    hasViolations [] """
+      import Innocent.Module (fn2)
+      x = y fn2
+    """
+
+    hasViolations [] """
+      import Innocent.Module as IM
+      x = y IM.fn2
+    """
+
   where
     config = Map.fromFoldable
       [ { function: "fn1" } /\ Map.singleton
