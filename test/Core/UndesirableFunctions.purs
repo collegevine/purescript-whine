@@ -50,6 +50,18 @@ spec = describe "UndesirableFunctions" do
         x = y fn2
       """
 
+  it "Reports when imported with a qualifier" do
+    hasViolations
+      [ "2:6-2:13" /\ "Do not use fn2 from Bad.Module"
+      , "3:6-3:13" /\ "Do not use fn3 from Bad.Module"
+      ]
+      """
+        import Bad.Module as FN2
+        import Bad.Module (fn3) as FN3
+        x = y FN2.fn2
+        y = z FN3.fn3
+      """
+
   where
     config = Map.fromFoldable
       [ { function: "fn1" } /\ Map.singleton

@@ -61,10 +61,10 @@ rule badFunctions = emptyRule { onExpr = onExpr }
               let report message = reportViolation { source: Just $ rangeOf e, message }
               case findImport m mod function of
                 Just imprt -> do -- Found whence this function is imported.
-                  let msg =
+                  let message =
                         Map.lookup (Just imprt) mods -- See if we have a message for this specific import.
                         <|> Map.lookup Nothing mods -- If not, see if we have a module-agnostic message for this function.
-                  report `traverse_` msg
+                  report `traverse_` message
                 Nothing -> -- Couldn't find this function in any imports. It could have been imported via an "open" import.
                   case Map.lookup Nothing mods of
                     Just message -> -- Found a module-agnostic message for this function => report it.
@@ -75,13 +75,20 @@ rule badFunctions = emptyRule { onExpr = onExpr }
       _ -> do
         pure unit
 
+    -- Look through imports in the header of the module and find one that either
+    -- (1) is qualified with the given qualifier `mod` or (2) lists the given
+    -- identifier `ident` among imported values or operators.
     findImport :: ∀ e. Module e -> Maybe ModuleName -> String -> Maybe ModuleName
     findImport (Module { header: ModuleHeader { imports } }) mod ident =
       imports # findMap \(ImportDecl i@{ module: Name { name } }) -> case i of
-        { qualified: Just (_ /\ Name { name: qualifier }) } | Just qualifier == mod ->
-          Just name
-        { names: Just (_ /\ (Wrapped { value: Separated { head, tail } })) } | sameIdentifier head || any (sameIdentifier <<< snd) tail ->
-          Just name
+        { qualified: Just (_ /\ Name { name: qualifier }) }
+          | Just qualifier == mod
+          ->
+            Just name
+        { names: Just (_ /\ (Wrapped { value: Separated { head, tail } })) }
+          | sameIdentifier head || any (sameIdentifier <<< snd) tail
+          ->
+            Just name
         _ ->
           Nothing
       where
