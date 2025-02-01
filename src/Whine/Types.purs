@@ -6,6 +6,7 @@ import Codec.JSON.DecodeError as DecodeError
 import Data.Codec.JSON as CJ
 import JSON as JSON
 import PureScript.CST.Range (class RangeOf)
+import PureScript.CST.Types (Module)
 import PureScript.CST.Types as CST
 import Whine.Log (class MonadLog)
 
@@ -73,9 +74,14 @@ type RuleFactories = Array (RuleId /\ RuleFactory)
 
 type File = { path :: FilePath, lines :: Maybe (Array String) }
 
--- | The monad in which each individual rule is run.
-class (Monad m, MonadLog m) <= MonadRules v m | m -> v where
+class Monad m <= MonadReport v m | m -> v where
   reportViolation :: Violation v -> m Unit
+
+class Monad m <= MonadContext (m :: Type -> Type) where
+  currentModule :: ∀ r. (∀ e. Module e -> m r) -> m r
+
+-- | The monad in which each individual rule is run.
+class (Monad m, MonadLog m, MonadContext m, MonadReport v m) <= MonadRules v m | m -> v
 
 -- | This function is intended to pair rules with their IDs. Every rule would
 -- | take its own `args` and provide a JSON codec to decode the args, and the

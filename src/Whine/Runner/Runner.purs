@@ -15,7 +15,7 @@ import Whine.Runner.Config (readConfig)
 import Whine.Runner.Glob (glob)
 import Whine.Runner.LanguageServer (startLanguageServer)
 import Whine.Types (RuleFactories, Violations, WithFile, WithMuted, WithRule)
-import WhineM (Env, runWhineM)
+import WhineM (runWhineM)
 
 -- | The main entry point into the linter. It takes some basic parameters and
 -- | runs the whole thing: reads the config, parses it, instantiates the rules,

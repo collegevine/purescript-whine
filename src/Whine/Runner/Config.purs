@@ -17,7 +17,7 @@ import Record (merge)
 import Whine.Runner.Glob (Globs)
 import Whine.Runner.PackageVersion (Version, formatVersion, parseVersion)
 import Whine.Runner.Yaml (parseYaml)
-import Whine.Types (class MonadRules, Rule, RuleFactories, RuleId, WithFile, WithRule, WithMuted, reportViolation)
+import Whine.Types (class MonadReport, Rule, RuleFactories, RuleId, WithFile, WithMuted, WithRule, reportViolation)
 import WhineM (WhineM, mapViolations)
 
 data PackageSpec
@@ -71,7 +71,7 @@ type ConfigJson =
 -- | The whole thing runs in a writer monad to which it can report any errors
 -- | while parsing the config. The errors doesn't stop the parsing, but
 -- | erroneous rules do not make it into the resulting map.
-parseRuleConfigs :: ∀ m. MonadRules (WithRule + ()) m => RuleFactories -> Map String JSON -> m RuleSet
+parseRuleConfigs :: ∀ m. MonadReport (WithRule + ()) m => RuleFactories -> Map String JSON -> m RuleSet
 parseRuleConfigs factories config =
   Map.fromFoldable <$> catMaybes <$>
     for factories \(ruleId /\ factory) -> do
@@ -113,7 +113,7 @@ parseRuleConfigs factories config =
         pure Nothing
 
 -- | Reads config from a given file and parses it.
-readConfig :: ∀ m. MonadEffect m => RuleFactories -> FilePath -> WhineM (WithRule + WithFile + WithMuted + ()) m Config
+readConfig :: ∀ m. MonadEffect m => RuleFactories -> FilePath -> WhineM (WithRule + WithFile + WithMuted + ()) Env m Config
 readConfig factories configFile = do
   text <- lmap Err.message <$> liftEffect (try $ readTextFile UTF8 configFile)
 

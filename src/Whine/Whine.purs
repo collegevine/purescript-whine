@@ -13,17 +13,17 @@ import PureScript.CST.Traversal as T
 import PureScript.CST.Types (Expr(..), Module(..), ModuleHeader(..), Separated(..), Wrapped(..))
 import PureScript.CST.Types as CST
 import Record (merge)
-import Whine.Log (logDebug)
+import Whine.Log (LogSeverity, logDebug)
 import Whine.Muting (MutedRange(..), mutedRanges)
 import Whine.Runner.Config (RuleSet)
 import Whine.Runner.Glob as Glob
 import Whine.Types (Handle(..), Rule, WithFile, WithMuted, WithRule, reportViolation)
-import WhineM (WhineM, mapViolations)
+import WhineM (CurrentModule(..), WhineM, mapEnv, mapViolations)
 
 -- | Given a parsed PS module, runs all the rules on it. The rules report
 -- | violations via Writer side-effects.
-runRules :: ∀ m e. MonadEffect m => RangeOf e => RuleSet -> Module e -> WhineM (WithRule + ()) m Unit
-runRules rs mdl = void do
+runRules :: ∀ m e. MonadEffect m => RangeOf e => RuleSet -> Module e -> WhineM (WithRule + ()) { logLevel :: LogSeverity } m Unit
+runRules rs mdl = void $ mapEnv (merge { currentModule: CurrentModule \f -> f mdl }) do
   onModule mdl
   traverseModule visitor mdl
   where
@@ -77,7 +77,7 @@ runRules rs mdl = void do
 
 -- | Given a file path, reads the file, then passes it to `checkModule` (see
 -- | comments there).
-checkFile :: ∀ m. MonadEffect m => RuleSet -> FilePath -> WhineM (WithRule + WithMuted + WithFile + ()) m Unit
+checkFile :: ∀ m. MonadEffect m => RuleSet -> FilePath -> WhineM (WithRule + WithMuted + WithFile + ()) { logLevel :: LogSeverity } m Unit
 checkFile rules path = do
   eText <- liftEffect $ try $ readTextFile UTF8 path
   case eText of
@@ -97,7 +97,7 @@ checkFile rules path = do
 -- | muting directives in the file itself as well as include/exclude globs in
 -- | each rule's config. If reading the file or parsing it fails, those
 -- | conditions are reported as linter violations, rather than a big loud crash.
-checkModule :: ∀ m. MonadEffect m => RuleSet -> { path :: FilePath, text :: String } -> WhineM (WithRule + WithMuted + WithFile + ()) m Unit
+checkModule :: ∀ m. MonadEffect m => RuleSet -> { path :: FilePath, text :: String } -> WhineM (WithRule + WithMuted + WithFile + ()) { logLevel :: LogSeverity } m Unit
 checkModule rules { path, text } =
   mapViolations addMutedAndFile do
     logDebug $ "Parsing " <> path

@@ -3,3 +3,8 @@ rulePackages:
   - whine-core:
       local: ./
       module: Whine.Core.WhineRules
+
+rules:
+  UndesirableFunctions:
+    functions:
+      unsafeCoerce: Do not use `unsafeCoerce`

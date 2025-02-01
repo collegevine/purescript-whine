@@ -16,7 +16,9 @@ import Whine.Log (class Loggable, class MonadLog, LogSeverity(..), log, logDebug
 import Whine.Types (WithFile, WithMuted, WithRule)
 import WhineM (WhineM)
 
-type RunnerM a = WhineM (WithFile + WithMuted + WithRule + ()) R.Aff a
+type Env = { logLevel :: R.LogSeverity }
+
+type RunnerM a = WhineM (WithFile + WithMuted + WithRule + ()) Env R.Aff a
 
 die :: ∀ err a. R.Loggable err => err -> RunnerM a
 die message = do
