@@ -26,25 +26,51 @@ import PureScript.CST.Range (rangeOf)
 import PureScript.CST.Types (Expr(..), Ident(..), Import(..), ImportDecl(..), Module(..), ModuleHeader(..), ModuleName, Name(..), Operator(..), QualifiedName(..), Separated(..), Wrapped(..))
 import Whine.Types (Handle(..), Rule, currentModule, emptyRule, reportViolation)
 
-rule :: Map { function :: String } (Map (Maybe ModuleName) String) -> Rule
+-- Config for this rule is a two-level map: first level is names of functions
+-- that are undesirable, and under each function a list of modules whence this
+-- function could be imported. In the YAML config this is defined in a one-level
+-- map like this:
+--
+--     functions:
+--       Module1.f: don't use Module1.f
+--       Module2.f: don't use Module2.f
+--       Another.Module.g: don't use Another.Module.g
+--       h: don't use h
+--
+-- But for efficient lookup at runtime we transform this into a two-level map
+-- like this:
+--
+--     { function: f }:
+--        Just Module1: don't use Module1.f
+--        Just Module2: don't use Module2.f
+--     { function: g }:
+--        Just Another.Module: don't use Another.Module.g
+--     { function: h }:
+--        Nothing: don't use h
+--
+type Args = Map { function :: String } (Map (Maybe ModuleName) String)
+
+rule :: Args -> Rule
 rule badFunctions = emptyRule { onExpr = onExpr }
   where
     onExpr = Handle case _ of
 
       e@(ExprIdent (QualifiedName { name: Ident function, module: mod }))
-        | Just mods <- Map.lookup { function } badFunctions ->
+        | Just mods <- Map.lookup { function } badFunctions -> -- This function is on the list of undesirables.
             currentModule \m -> do
+              let report message = reportViolation { source: Just $ rangeOf e, message }
               case findImport m mod function of
-                Just imprt ->
-                  for_ (Map.lookup (Just imprt) mods <|> Map.lookup Nothing mods) \message ->
-                    reportViolation { source: Just $ rangeOf e, message }
-                Nothing ->
+                Just imprt -> do -- Found whence this function is imported.
+                  let msg =
+                        Map.lookup (Just imprt) mods -- See if we have a message for this specific import.
+                        <|> Map.lookup Nothing mods -- If not, see if we have a module-agnostic message for this function.
+                  report `traverse_` msg
+                Nothing -> -- Couldn't find this function in any imports. It could have been imported via an "open" import.
                   case Map.lookup Nothing mods of
-                    Just message ->
-                      reportViolation { source: Just $ rangeOf e, message }
-                    Nothing ->
-                      for_ mods \message ->
-                        reportViolation { source: Just $ rangeOf e, message }
+                    Just message -> -- Found a module-agnostic message for this function => report it.
+                      report message
+                    Nothing -> -- No message found for this function => report all messages just in case.
+                      report `traverse_` mods
 
       _ -> do
         pure unit
@@ -64,7 +90,7 @@ rule badFunctions = emptyRule { onExpr = onExpr }
         sameIdentifier _ = false
 
 
-codec :: CJ.Codec (Map { function :: String } (Map (Maybe ModuleName) String))
+codec :: CJ.Codec Args
 codec =
   dimap explodeMaps foldMaps $
     CJR.object { functions: CJ.Common.strMap CJ.string }
@@ -77,7 +103,7 @@ codec =
       _ ->
         Nothing /\ s
 
-    explodeMaps :: Map { function :: String } (Map (Maybe ModuleName) String) -> { functions :: Map String String }
+    explodeMaps :: Args -> { functions :: Map String String }
     explodeMaps mm =
       { functions: Map.fromFoldable do
           { function } /\ modules <- (Map.toUnfoldable mm :: Array _)
@@ -86,7 +112,7 @@ codec =
           pure $ (modulePrefix <> function) /\ message
       }
 
-    foldMaps :: { functions :: Map String String } -> Map { function :: String } (Map (Maybe ModuleName) String)
+    foldMaps :: { functions :: Map String String } -> Args
     foldMaps mm = Map.unions do
       maybeQualifiedFunction /\ message <- (Map.toUnfoldable mm.functions :: Array _)
       let mod /\ function = fromQualified maybeQualifiedFunction
