@@ -59,18 +59,17 @@ rule badFunctions = emptyRule { onExpr = onExpr }
         | Just mods <- Map.lookup { function } badFunctions -> -- This function is on the list of undesirables.
             currentModule \m -> do
               let report message = reportViolation { source: Just $ rangeOf e, message }
-              case findImport m mod function of
+                  importedFrom = explicitOrQualifiedImport m mod function <|> loneOpenImport m
+              case importedFrom of
                 Just imprt -> do -- Found whence this function is imported.
                   let message =
                         Map.lookup (Just imprt) mods -- See if we have a message for this specific import.
                         <|> Map.lookup Nothing mods -- If not, see if we have a module-agnostic message for this function.
                   report `traverse_` message
+
                 Nothing -> -- Couldn't find this function in any imports. It could have been imported via an "open" import.
-                  case Map.lookup Nothing mods of
-                    Just message -> -- Found a module-agnostic message for this function => report it.
-                      report message
-                    Nothing -> -- No message found for this function => report all messages just in case.
-                      report `traverse_` mods
+                  for_ (Map.lookup Nothing mods) \message -> -- Report a module-agnostic message for this function, if defined.
+                    report message
 
       _ -> do
         pure unit
@@ -78,8 +77,8 @@ rule badFunctions = emptyRule { onExpr = onExpr }
     -- Look through imports in the header of the module and find one that either
     -- (1) is qualified with the given qualifier `mod` or (2) lists the given
     -- identifier `ident` among imported values or operators.
-    findImport :: ∀ e. Module e -> Maybe ModuleName -> String -> Maybe ModuleName
-    findImport (Module { header: ModuleHeader { imports } }) mod ident =
+    explicitOrQualifiedImport :: ∀ e. Module e -> Maybe ModuleName -> String -> Maybe ModuleName
+    explicitOrQualifiedImport (Module { header: ModuleHeader { imports } }) mod ident =
       imports # findMap \(ImportDecl i@{ module: Name { name } }) -> case i of
         { qualified: Just (_ /\ Name { name: qualifier }) }
           | Just qualifier == mod
@@ -95,6 +94,18 @@ rule badFunctions = emptyRule { onExpr = onExpr }
         sameIdentifier (ImportValue (Name { name: Ident name })) = name == ident
         sameIdentifier (ImportOp (Name { name: Operator op })) = op == ident
         sameIdentifier _ = false
+
+    loneOpenImport :: ∀ e. Module e -> Maybe ModuleName
+    loneOpenImport (Module { header: ModuleHeader { imports } }) =
+      let candidates =
+            imports # mapMaybe \(ImportDecl i@{ module: Name { name } }) -> case i of
+              { qualified: Nothing, names: Nothing } -> Just name
+              _ -> Nothing
+
+      in
+        case candidates of
+          [name] -> Just name
+          _ -> Nothing
 
 
 codec :: CJ.Codec Args

@@ -34,21 +34,31 @@ spec = describe "UndesirableFunctions" do
       x = y fn3
     """
 
+  it "Assumes open-imported module if there is only one" do
+    hasViolations ["2:6-2:9" /\ "Do not use fn3 from Bad.Module"] """
+      import Bad.Module
+      import Another.Module (fn2)
+      x = y fn3
+    """
+
+  it "Does not assume open-imported module if there are several of them" do
+    hasViolations [] """
+      import Bad.Module
+      import Another.Module
+      x = y fn2
+    """
+
   it "Falls back to unqualified message when the import is open" do
     hasViolations ["1:6-1:9" /\ "Do not use fn3"] """
       import Some
       x = y fn3
     """
 
-  it "Reports all messages when no import and no unqualified message" do
-    hasViolations
-      [ "1:6-1:9" /\ "Do not use fn2 from Another.Module"
-      , "1:6-1:9" /\ "Do not use fn2 from Bad.Module"
-      ]
-      """
-        import Some
-        x = y fn2
-      """
+  it "Does not report when no import and no unqualified message" do
+    hasViolations [] """
+      import Some
+      x = y fn2
+    """
 
   it "Reports when imported with a qualifier" do
     hasViolations
