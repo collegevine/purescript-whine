@@ -24,6 +24,7 @@ import Data.Map as Map
 import Data.String as String
 import PureScript.CST.Range (rangeOf)
 import PureScript.CST.Types (Expr(..), Ident(..), Import(..), ImportDecl(..), Module(..), ModuleHeader(..), ModuleName, Name(..), Operator(..), QualifiedName(..), Separated(..), Wrapped(..))
+import Whine.Log (logDebug)
 import Whine.Types (Handle(..), Rule, currentModule, emptyRule, reportViolation)
 
 -- Config for this rule is a two-level map: first level is names of functions
@@ -58,10 +59,15 @@ rule badFunctions = emptyRule { onExpr = onExpr }
       e@(ExprIdent (QualifiedName { name: Ident function, module: mod }))
         | Just mods <- Map.lookup { function } badFunctions -> -- This function is on the list of undesirables.
             currentModule \m -> do
+              logDebug $ "Checking " <> function <> " from " <> show (unwrap <$> mod)
+              logDebug $ "Modules: " <> show ((lmap $ map unwrap) <$> Map.toUnfoldable mods :: Array _)
               let report message = reportViolation { source: Just $ rangeOf e, message }
-                  importedFrom = explicitOrQualifiedImport m mod function <|> loneOpenImport m
+                  importedFrom = qualifiedImport m mod <|> explicitImport m function <|> loneOpenImport m
+              logDebug $ "Imported from " <> show (unwrap <$> importedFrom)
               case importedFrom of
                 Just imprt -> do -- Found whence this function is imported.
+                  logDebug $ "Explicit message: " <> show (Map.lookup (Just imprt) mods)
+                  logDebug $ "Module-agnostic message: " <> show (Map.lookup Nothing mods)
                   let message =
                         Map.lookup (Just imprt) mods -- See if we have a message for this specific import.
                         <|> Map.lookup Nothing mods -- If not, see if we have a module-agnostic message for this function.
@@ -74,16 +80,22 @@ rule badFunctions = emptyRule { onExpr = onExpr }
       _ -> do
         pure unit
 
-    -- Look through imports in the header of the module and find one that either
-    -- (1) is qualified with the given qualifier `mod` or (2) lists the given
-    -- identifier `ident` among imported values or operators.
-    explicitOrQualifiedImport :: ∀ e. Module e -> Maybe ModuleName -> String -> Maybe ModuleName
-    explicitOrQualifiedImport (Module { header: ModuleHeader { imports } }) mod ident =
+    -- Look through imports in the header of the module and find one that is
+    -- qualified with the given qualifier `mod`
+    qualifiedImport :: ∀ e. Module e -> Maybe ModuleName -> Maybe ModuleName
+    qualifiedImport _ Nothing = Nothing
+    qualifiedImport (Module { header: ModuleHeader { imports } }) (Just mod) =
       imports # findMap \(ImportDecl i@{ module: Name { name } }) -> case i of
-        { qualified: Just (_ /\ Name { name: qualifier }) }
-          | Just qualifier == mod
-          ->
-            Just name
+        { qualified: Just (_ /\ Name { name: qualifier }) } | qualifier == mod ->
+          Just name
+        _ ->
+          Nothing
+
+    -- Look through imports in the header of the module and find one that lists
+    -- the given identifier `ident` among imported values or operators.
+    explicitImport :: ∀ e. Module e -> String -> Maybe ModuleName
+    explicitImport (Module { header: ModuleHeader { imports } }) ident =
+      imports # findMap \(ImportDecl i@{ module: Name { name } }) -> case i of
         { names: Just (_ /\ (Wrapped { value: Separated { head, tail } })) }
           | sameIdentifier head || any (sameIdentifier <<< snd) tail
           ->
@@ -131,7 +143,7 @@ codec =
       }
 
     foldMaps :: { functions :: Map String String } -> Args
-    foldMaps mm = Map.unions do
+    foldMaps mm = foldl (Map.unionWith Map.union) Map.empty do
       maybeQualifiedFunction /\ message <- (Map.toUnfoldable mm.functions :: Array _)
       let mod /\ function = fromQualified maybeQualifiedFunction
       pure $ Map.singleton { function } $ Map.singleton mod message
