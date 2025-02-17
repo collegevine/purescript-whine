@@ -6,7 +6,6 @@ import Data.String as String
 import Data.String.Regex (replace) as Regex
 import Data.String.Regex.Flags as RegexFlags
 import Data.String.Regex.Unsafe (unsafeRegex) as Regex
-import Debug (traceM)
 import Effect.Aff (Aff)
 import Effect.Class.Console as Console
 import Effect.Ref as Ref
@@ -35,7 +34,6 @@ integrationSpecs { debug, accept } = do
         checkOutput actualOutput expectedOutputPath
 
       checkOutput actualOutput expectedOutputPath = do
-        traceM { actualOutput }
         if accept then do
           Console.log $ "Accepting the output for " <> expectedOutputPath
           FS.writeTextFile expectedOutputPath actualOutput
@@ -77,7 +75,9 @@ integrationSpecs { debug, accept } = do
         -- Run multiple times, make sure there is the same input
         for_ [1,2,3] \_ -> do
           output1 <- runWhine ["--debug"]
-          checkOutput (patchTime $ patchLatestDependency output1) (caseDir // "with-local-rule-config-debug.txt")
+          checkOutput
+            (patchTime $ patchLatestDependency $ patchBundleHash output1)
+            (caseDir // "with-local-rule-config-debug.txt")
 
         -- Now touch the local rules source, see if Whine detects the timestamp
         -- change and rebuilds the cached bundle
@@ -85,7 +85,7 @@ integrationSpecs { debug, accept } = do
           <#> String.replace (Pattern "Local rule") (Replacement "Local rule changed")
           >>= FS.writeTextFile (dir // "src/WhineRules.purs")
         output2 <- runWhine ["--debug"]
-        checkOutput (patchTime output2) (caseDir // "with-local-rule-changed.txt")
+        checkOutput (patchTime $ patchBundleHash output2) (caseDir // "with-local-rule-changed.txt")
 
   where
     patchTime = Regex.replace timeRegex "<TIMESTAMP>"
@@ -95,6 +95,9 @@ integrationSpecs { debug, accept } = do
 
     patchLatestDependency = Regex.replace latestDependencyRegex "latest dependency <SNIP> time is"
     latestDependencyRegex = Regex.unsafeRegex "latest dependency [^ ]+ time is" RegexFlags.global
+
+    patchBundleHash = Regex.replace bundleHashRegex "bundle-<HASH>.mjs.map"
+    bundleHashRegex = Regex.unsafeRegex "bundle-.+\\.mjs\\.map" RegexFlags.global
 
 prepareEnvironment :: { debug :: Boolean } -> Effect
   { copyTree :: FilePath -> Aff Unit
