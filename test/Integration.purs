@@ -3,6 +3,9 @@ module Test.Integration where
 import Test.Prelude
 
 import Data.String as String
+import Data.String.Regex (replace) as Regex
+import Data.String.Regex.Flags as RegexFlags
+import Data.String.Regex.Unsafe (unsafeRegex) as Regex
 import Effect.Aff (Aff)
 import Effect.Class.Console as Console
 import Effect.Ref as Ref
@@ -72,7 +75,7 @@ integrationSpecs { debug, accept } = do
         -- Run multiple times, make sure there is the same input
         for_ [1,2,3] \_ -> do
           output1 <- runWhine ["--debug"]
-          checkOutput output1 (caseDir // "with-local-rule-config-debug.txt")
+          checkOutput (patchTime output1) (caseDir // "with-local-rule-config-debug.txt")
 
         -- Now touch the local rules source, see if Whine detects the timestamp
         -- change and rebuilds the cached bundle
@@ -80,7 +83,13 @@ integrationSpecs { debug, accept } = do
           <#> String.replace (Pattern "Local rule") (Replacement "Local rule changed")
           >>= FS.writeTextFile (dir // "src/WhineRules.purs")
         output2 <- runWhine ["--debug"]
-        checkOutput output2 (caseDir // "with-local-rule-changed.txt")
+        checkOutput (patchTime output2) (caseDir // "with-local-rule-changed.txt")
+
+  where
+    patchTime = Regex.replace timeRegex "<TIMESTAMP>"
+    timeRegex = Regex.unsafeRegex
+      "(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{1,3})|(\\[\\d{2}:\\d{2}:\\d{2}\\.\\d{3}\\])"
+      RegexFlags.global
 
 prepareEnvironment :: { debug :: Boolean } -> Effect
   { copyTree :: FilePath -> Aff Unit

@@ -208,15 +208,15 @@ dependenciesChanged cwd mapFile = do
       let cleanSources = sources # filter (not ignored)
       { modifiedTime: mapFileTime } <- FS.stat mapFilePath
 
-      fileStats <- for cleanSources \source -> FS.stat (cwd <> "/" <> source) <#> _.modifiedTime <#> (source /\ _)
-      let mLatestSource = maximumBy (comparing snd) fileStats
+      fileStats <- for cleanSources \source -> FS.stat (cwd <> "/" <> source) <#> _.modifiedTime <#> (_ /\ source)
+      let mLatestSource = maximum fileStats
 
       logDebug $ fold
-        [ mapFile, " last modified at", formatTime mapFileTime
-        , ", latest dependency ", maybe "<none>" fst mLatestSource
-        , " time is ", maybe "<none>" (formatTime <<< snd) mLatestSource
+        [ mapFile, " last modified at ", formatTime mapFileTime
+        , ", latest dependency ", maybe "<none>" snd mLatestSource
+        , " time is ", maybe "<none>" (formatTime <<< fst) mLatestSource
         ]
-      pure $ mLatestSource # maybe true \(_ /\ t) -> mapFileTime < t
+      pure $ mLatestSource # maybe true \(t /\ _) -> mapFileTime < t
   where
     mapFilePath = cwd <> "/" <> mapFile
 
