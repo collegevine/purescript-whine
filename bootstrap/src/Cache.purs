@@ -209,7 +209,7 @@ dependenciesChanged cwd mapFile = do
       { modifiedTime: mapFileTime } <- FS.stat mapFilePath
 
       fileStats <- for cleanSources \source -> FS.stat (cwd <> "/" <> source) <#> _.modifiedTime <#> (_ /\ source)
-      let mLatestSource = maximum fileStats
+      let mLatestSource = maximumBy (comparing fst) fileStats
 
       logDebug $ fold
         [ mapFile, " last modified at ", formatTime mapFileTime
