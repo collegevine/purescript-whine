@@ -1,0 +1,3 @@
+Local rule configured with 'null' is running on Local.WhineRules
+Local rule configured with 'null' is running on Main
+No violations found.

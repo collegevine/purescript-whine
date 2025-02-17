@@ -5,8 +5,10 @@ module Whine.Runner.FS
 
 import Whine.Runner.Prelude
 
+import Data.DateTime (DateTime)
 import Node.FS.Aff as NodeFS
 import Node.FS.Perms (permsReadWrite)
+import Node.FS.Stats as NodeStats
 import Node.FS.Sync as NodeFSSync
 import Node.Path (relative) as R
 
@@ -29,3 +31,8 @@ exists path = liftEffect $
 unlink :: FilePath -> RunnerM Unit
 unlink path = tryOrDie $ liftAff $
   NodeFS.unlink path
+
+stat :: FilePath -> RunnerM { modifiedTime :: DateTime }
+stat path = do
+  stats <- liftAff $ NodeFS.stat path
+  pure { modifiedTime: NodeStats.modifiedTime stats }

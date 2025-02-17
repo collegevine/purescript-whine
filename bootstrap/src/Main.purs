@@ -13,7 +13,7 @@ import Node.ChildProcess.Types as StdIO
 import Node.Process (argv)
 import Node.Process as Node
 import Spago.Generated.BuildInfo as BuildInfo
-import Whine.Bootstrap.Cache (cacheDir, hashConfig, rebuildCache, whineCorePackage)
+import Whine.Bootstrap.Cache (cacheDir, dependenciesChanged, hashConfig, rebuildCache, whineCorePackage)
 import Whine.Bootstrap.Execa (execa)
 import Whine.Bootstrap.JsonCodecs as J
 import Whine.Runner.Cli as Cli
@@ -52,8 +52,17 @@ entryPoint = do
   let configHash = hashConfig { rulePackages }
       bundleFile = "bundle-" <> configHash <> ".mjs"
       bundlePath = cacheDir <> "/" <> bundleFile
+      bundleSourceMapFile = bundleFile <> ".map"
 
-  unlessM (FS.exists bundlePath) $
+  whenM (dependenciesChanged cacheDir bundleSourceMapFile) do
+    logDebug "Some source dependencies of the cached bundle have changed"
+    whenM (FS.exists bundlePath) $
+      FS.unlink bundlePath
+    whenM (FS.exists $ cacheDir <> "/" <> bundleSourceMapFile) $
+      FS.unlink $ cacheDir <> "/" <> bundleSourceMapFile
+
+  unlessM (FS.exists bundlePath) do
+    logDebug "Rebuilding the cached bundle"
     rebuildCache { rulePackages, bundleFile }
 
   unlessM (FS.exists bundlePath) $

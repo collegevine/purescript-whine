@@ -18,6 +18,9 @@ chdir = liftEffect <<< Node.chdir
 exists :: ∀ m. MonadAff m => FilePath -> m Boolean
 exists = liftEffect <<< SyncFS.exists
 
+unlink :: ∀ m. MonadAff m => FilePath -> m Unit
+unlink = liftEffect <<< SyncFS.unlink
+
 newTempDir :: ∀ m. MonadAff m => m String
 newTempDir = do
   tmpdir <- liftEffect $ (\t u -> t <> "/" <> UUID.toString u) <$> NodeOS.tmpdir <*> UUID.genUUID
@@ -40,3 +43,6 @@ copyTree :: ∀ m. MonadAff m => FilePath -> FilePath -> m Unit
 copyTree src dest = liftEffect $ copyTree_ src dest
 
 foreign import copyTree_ :: FilePath -> FilePath -> Effect Unit
+
+copyFile :: ∀ m. MonadAff m => FilePath -> FilePath -> m Unit
+copyFile src dest = liftAff $ FS.copyFile src dest

@@ -1,0 +1,9 @@
+[20:06:33.156]: Checking dependency timestamps based on bundle-7c65f400b94f18cc70c53ba2cc3d5d7309f7c7dcfd8f1fff9469eb7884fa5191.mjs.map
+[20:06:33.180]: bundle-7c65f400b94f18cc70c53ba2cc3d5d7309f7c7dcfd8f1fff9469eb7884fa5191.mjs.map last modified at2025-02-17T20:06:31.370, latest dependency output/Whine.Runner.Yaml/foreign.js time is 2025-02-17T20:06:30.276
+[20:06:33.313]: Parsing src/WhineRules.purs
+[20:06:33.326]: Parsed src/WhineRules.purs, running rules
+Local rule configured with '{"foo":"bar","baz":42}' is running on Local.WhineRules
+[20:06:33.333]: Parsing src/Main.purs
+[20:06:33.334]: Parsed src/Main.purs, running rules
+Local rule configured with '{"foo":"bar","baz":42}' is running on Main
+No violations found.

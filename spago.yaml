@@ -51,7 +51,7 @@ package:
     dependencies:
       - spec-node
   publish:
-    version: 0.0.27
+    version: 0.0.28
     license: MIT
     location:
       githubOwner: collegevine

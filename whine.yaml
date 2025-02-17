@@ -4,6 +4,12 @@ rulePackages:
       local: ./
       module: Whine.Core.WhineRules
 
+include:
+  - src/**/*.purs
+  - bootstrap/**/*.purs
+  - vscode-extension/**/*.purs
+  - test/**/*.purs
+
 rules:
   UndesirableFunctions:
     functions:

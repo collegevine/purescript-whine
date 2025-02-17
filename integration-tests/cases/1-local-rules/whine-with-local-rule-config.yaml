@@ -1,0 +1,12 @@
+rulePackages:
+  - whine-core:
+      local: PROJECT_PATH
+      module: Whine.Core.WhineRules
+  - local-rules:
+      local: ./
+      module: Local.WhineRules
+
+rules:
+    LocalRule:
+        foo: "bar"
+        baz: 42

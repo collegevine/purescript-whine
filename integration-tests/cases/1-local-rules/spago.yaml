@@ -1,0 +1,12 @@
+package:
+  name: test-package
+  dependencies:
+    - prelude
+    - effect
+    - whine-core
+workspace:
+  packageSet:
+    registry: 62.2.5
+  extraPackages:
+    whine-core:
+      path: PROJECT_PATH

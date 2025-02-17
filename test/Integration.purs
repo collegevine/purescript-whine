@@ -18,18 +18,24 @@ import Test.Spec.Assertions (shouldEqual)
 -- | more details.
 integrationSpecs :: { debug :: Boolean, accept :: Boolean } -> Aff (Spec Unit)
 integrationSpecs { debug, accept } = do
-  { copyTree, runWhine, cleanupEnvironment } <- liftEffect $ prepareEnvironment { debug }
+  { copyTree, runWhine, cleanupEnvironment, patchProjectPathIn, testDir } <- liftEffect $ prepareEnvironment { debug }
 
   let runTest { caseDir, whineArgs, expectedOutput } = do
         let caseDir' = "integration-tests" // "cases" // caseDir
-            expectedOutputDir = caseDir' // expectedOutput
         copyTree caseDir'
-        actualOutput <- runWhine whineArgs
+        runWhineAndCheckOutput (caseDir' // expectedOutput) whineArgs
+
+      runWhineAndCheckOutput expectedOutputPath whineArgs = do
+        void $ runWhine whineArgs -- Run once to initialize
+        actualOutput <- runWhine whineArgs -- Run a second time to capture output
+        checkOutput actualOutput expectedOutputPath
+
+      checkOutput actualOutput expectedOutputPath = do
         if accept then do
-          Console.log $ "Accepting the output for " <> expectedOutputDir
-          FS.writeTextFile expectedOutputDir actualOutput
+          Console.log $ "Accepting the output for " <> expectedOutputPath
+          FS.writeTextFile expectedOutputPath actualOutput
         else do
-          goldenOutput <- FS.readTextFile expectedOutputDir
+          goldenOutput <- FS.readTextFile expectedOutputPath
           String.trim actualOutput `shouldEqual` String.trim goldenOutput
 
   pure $ afterAll (\_ -> cleanupEnvironment) $
@@ -51,10 +57,37 @@ integrationSpecs { debug, accept } = do
         runTest { caseDir: "0-normal", whineArgs: ["src/nested/doubly-nested/**/*.purs"], expectedOutput: "glob-only-doubly-nested.txt" }
         runTest { caseDir: "0-normal", whineArgs: ["src/nested/**/*.purs", "**/*/B.purs"], expectedOutput: "glob-nested-and-b.txt" }
 
+      it "Picks up and runs local rules" do
+        let caseDir = "integration-tests/cases/1-local-rules"
+        dir <- testDir
+        copyTree caseDir
+        patchProjectPathIn "spago.yaml"
+        runWhineAndCheckOutput (caseDir // "baseline.txt") []
+
+        FS.unlink (dir // "whine.yaml")
+        FS.copyFile (caseDir // "whine-with-local-rule-config.yaml") (dir // "whine.yaml")
+        patchProjectPathIn "whine.yaml"
+        runWhineAndCheckOutput (caseDir // "with-local-rule-config.txt") []
+
+        -- Run multiple times, make sure there is the same input
+        for_ [1,2,3] \_ -> do
+          output1 <- runWhine ["--debug"]
+          checkOutput output1 (caseDir // "with-local-rule-config-debug.txt")
+
+        -- Now touch the local rules source, see if Whine detects the timestamp
+        -- change and rebuilds the cached bundle
+        FS.readTextFile (dir // "src/WhineRules.purs")
+          <#> String.replace (Pattern "Local rule") (Replacement "Local rule changed")
+          >>= FS.writeTextFile (dir // "src/WhineRules.purs")
+        output2 <- runWhine ["--debug"]
+        checkOutput output2 (caseDir // "with-local-rule-changed.txt")
+
 prepareEnvironment :: { debug :: Boolean } -> Effect
   { copyTree :: FilePath -> Aff Unit
   , runWhine :: Array String -> Aff String
   , cleanupEnvironment :: Aff Unit
+  , patchProjectPathIn :: FilePath -> Aff Unit
+  , testDir :: Aff FilePath
   }
 prepareEnvironment { debug } =
   Ref.new Nothing <#> \envDirVar ->
@@ -62,17 +95,12 @@ prepareEnvironment { debug } =
         dir <- ensureEnvironmentInitialized envDirVar
         whenM (FS.exists $ dir // "src") $ FS.rmdir (dir // "src")
         FS.copyTree sourceDir dir
-
-        cwd <- FS.cwd
-        config <- FS.readTextFile (dir // "whine.yaml")
-        FS.writeTextFile (dir // "whine.yaml") $ String.replace (Pattern "PROJECT_PATH") (Replacement cwd) config
+        patchProjectPathIn (dir // "whine.yaml")
 
     , runWhine: \args -> do
         dir <- ensureEnvironmentInitialized envDirVar
         here <- FS.cwd
-        let r = run dir "node" $ [here // "dist/npm/index.js"] <> args
-        void r -- Run once to initialize
-        r -- Run another time to capture output
+        run dir "node" $ [here // "dist/npm/index.js"] <> args
 
     , cleanupEnvironment:
         liftEffect (Ref.read envDirVar) >>= case _ of
@@ -83,6 +111,12 @@ prepareEnvironment { debug } =
             FS.rmdir dir
           Nothing ->
             pure unit
+
+    , patchProjectPathIn: \file -> do
+        dir <- ensureEnvironmentInitialized envDirVar
+        patchProjectPathIn (dir // file)
+
+    , testDir: ensureEnvironmentInitialized envDirVar
     }
   where
     traceLog
@@ -111,6 +145,13 @@ prepareEnvironment { debug } =
         _ -> do
           Console.error res.stderr
           pure ""
+
+    patchProjectPathIn file =
+      whenM (FS.exists file) do
+        cwd <- FS.cwd
+        config <- FS.readTextFile file
+        FS.writeTextFile file $ String.replace (Pattern "PROJECT_PATH") (Replacement cwd) config
+
 
 pathConcat :: String -> String -> String
 pathConcat a b = a <> "/" <> b

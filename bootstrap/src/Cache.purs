@@ -1,5 +1,6 @@
 module Whine.Bootstrap.Cache
   ( cacheDir
+  , dependenciesChanged
   , hashConfig
   , rebuildCache
   , whineCorePackage
@@ -10,12 +11,17 @@ import Whine.Runner.Prelude
 
 import Codec.JSON.DecodeError as DecodeError
 import Control.Monad.Reader (asks)
+import Data.DateTime (DateTime)
+import Data.Formatter.DateTime as Fmt
+import Data.List as List
 import Data.Map as Map
 import Data.Maybe (fromJust)
 import Data.String as String
 import Data.Tuple (uncurry)
+import Data.UUID as UUID
 import JSON as JSON
 import Node.ChildProcess.Types as StdIO
+import Node.Path as NodePath
 import Partial.Unsafe (unsafePartial)
 import Spago.Generated.BuildInfo as BuildInfo
 import Whine.Bootstrap.Execa (execResultSuccessOrDie, execSuccessOrDie_, execa)
@@ -37,7 +43,9 @@ rebuildCache { rulePackages, bundleFile } = do
   logInfo "Please hold on, preparing to whine..."
   logInfo "Applying artificial tears..."
 
-  let mainModule = "Main"
+  unique <- liftEffect $ String.replaceAll (Pattern "-") (Replacement "") <$> UUID.toString <$> UUID.genUUID
+
+  let mainModule = "Main" <> unique
       packageName = "whine-cached-bootstrap"
       dependencies = Map.union rulePackages (uncurry Map.singleton whineCorePackage)
 
@@ -110,7 +118,7 @@ rebuildCache { rulePackages, bundleFile } = do
 
   logSameLine "Revisiting complaints..."
   execSuccessOrDie_ "spago bundle" =<<
-    execa "npx" ["spago", "bundle"] _
+    execa "npx" ["spago", "bundle", "--source-maps"] _
       { cwd = Just cacheDir
       , stdout = Just StdIO.pipe
       , stderr = Just StdIO.pipe
@@ -189,6 +197,44 @@ hashConfig { rulePackages } = hashString $ fold
       PackageVersion v -> formatVersion v
       LocalPackage p -> p.path <> ":" <> fromMaybe "" p.module
 
+dependenciesChanged :: FilePath -> FilePath -> RunnerM Boolean
+dependenciesChanged cwd mapFile = do
+  logDebug $ "Checking dependency timestamps based on " <> mapFile
+  readMapFile >>= case _ of
+    Nothing -> do
+      logDebug $ mapFile <> " doesn't exist. Assuming dependencies have changed."
+      pure true
+    Just { sources } -> do
+      let cleanSources = sources # filter (not ignored)
+      { modifiedTime: mapFileTime } <- FS.stat mapFilePath
+
+      fileStats <- for cleanSources \source -> FS.stat (cwd <> "/" <> source) <#> _.modifiedTime <#> (source /\ _)
+      let mLatestSource = maximumBy (comparing snd) fileStats
+
+      logDebug $ fold
+        [ mapFile, " last modified at", formatTime mapFileTime
+        , ", latest dependency ", maybe "<none>" fst mLatestSource
+        , " time is ", maybe "<none>" (formatTime <<< snd) mLatestSource
+        ]
+      pure $ mLatestSource # maybe true \(_ /\ t) -> mapFileTime < t
+  where
+    mapFilePath = cwd <> "/" <> mapFile
+
+    readMapFile =
+      ifM (FS.exists mapFilePath)
+        (Just <$> (decodeMapFile =<< FS.readFile mapFilePath))
+        (pure Nothing)
+
+    decodeMapFile content = rightOrDie do
+      json <- JSON.parse content
+      J.decode sourceMapCodec json # lmap DecodeError.print
+
+    ignored file =
+      head (String.split (Pattern NodePath.sep) file) # maybe false (_ `elem` ignore)
+
+    ignore =
+      ["node_modules", "<stdin>", ".spago"]
+
 type SpagoYaml =
   { package ::
     { name :: String
@@ -220,3 +266,23 @@ moduleGraphCodec :: J.Codec (Map String { package :: String })
 moduleGraphCodec = J.strMap $ J.object
   { package: J.string
   }
+
+sourceMapCodec :: J.Codec { sources :: Array String }
+sourceMapCodec = J.object { sources: J.array J.string }
+
+formatTime :: DateTime -> String
+formatTime = Fmt.format $ List.fromFoldable
+  [ Fmt.YearFull
+  , Fmt.Placeholder "-"
+  , Fmt.MonthTwoDigits
+  , Fmt.Placeholder "-"
+  , Fmt.DayOfMonthTwoDigits
+  , Fmt.Placeholder "T"
+  , Fmt.Hours24
+  , Fmt.Placeholder ":"
+  , Fmt.MinutesTwoDigits
+  , Fmt.Placeholder ":"
+  , Fmt.SecondsTwoDigits
+  , Fmt.Placeholder "."
+  , Fmt.Milliseconds
+  ]
