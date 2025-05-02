@@ -13,7 +13,7 @@ import Node.ChildProcess.Types as StdIO
 import Node.Process (argv)
 import Node.Process as Node
 import Spago.Generated.BuildInfo as BuildInfo
-import Whine.Bootstrap.Cache (cacheDir, dependenciesChanged, hashConfig, rebuildCache, whineCorePackage)
+import Whine.Bootstrap.Cache (getCache, whineCorePackage)
 import Whine.Bootstrap.Execa (execa)
 import Whine.Bootstrap.JsonCodecs as J
 import Whine.Runner.Cli as Cli
@@ -49,27 +49,17 @@ entryPoint = do
           _ ->
             config.rulePackages
 
-  let configHash = hashConfig { rulePackages }
-      bundleFile = "bundle-" <> configHash <> ".mjs"
-      bundlePath = cacheDir <> "/" <> bundleFile
-      bundleSourceMapFile = bundleFile <> ".map"
+  cache <- getCache { rulePackages}
 
-  whenM (dependenciesChanged cacheDir bundleSourceMapFile) do
-    logDebug "Some source dependencies of the cached bundle have changed"
-    whenM (FS.exists bundlePath) $
-      FS.unlink bundlePath
-    whenM (FS.exists $ cacheDir <> "/" <> bundleSourceMapFile) $
-      FS.unlink $ cacheDir <> "/" <> bundleSourceMapFile
-
-  unlessM (FS.exists bundlePath) do
+  when cache.dirty do
     logDebug "Rebuilding the cached bundle"
-    rebuildCache { rulePackages, bundleFile }
+    cache.rebuild
 
-  unlessM (FS.exists bundlePath) $
+  unlessM (FS.exists cache.executable) $
     die "Failed to rebuild Whine cache"
 
   args <- liftEffect argv
-  whineProc <- execa bundlePath (drop 2 args) _
+  whineProc <- execa cache.executable (drop 2 args) _
     { stdin = Just StdIO.inherit
     , stdout = Just StdIO.inherit
     , stderr = Just StdIO.inherit

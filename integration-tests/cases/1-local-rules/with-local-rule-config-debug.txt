@@ -1,5 +1,4 @@
-<TIMESTAMP>: Checking dependency timestamps based on bundle-<HASH>.mjs.map
-<TIMESTAMP>: bundle-<HASH>.mjs.map last modified at <TIMESTAMP>, latest dependency <SNIP> time is <TIMESTAMP>
+<TIMESTAMP>: .whine/bundle-<HASH>.mjs last modified at <TIMESTAMP>, latest dependency <SNIP> time is <TIMESTAMP>
 <TIMESTAMP>: Parsing src/WhineRules.purs
 <TIMESTAMP>: Parsed src/WhineRules.purs, running rules
 Local rule configured with '{"foo":"bar","baz":42}' is running on Local.WhineRules

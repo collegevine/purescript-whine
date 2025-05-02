@@ -1,8 +1,6 @@
 module Whine.Bootstrap.Cache
-  ( cacheDir
-  , dependenciesChanged
-  , hashConfig
-  , rebuildCache
+  ( Cache
+  , getCache
   , whineCorePackage
   )
   where
@@ -33,6 +31,66 @@ import Whine.Runner.PackageVersion (formatVersion, formatVersionRange, parseVers
 import Whine.Runner.Yaml as Yaml
 
 cacheDir = ".whine" :: String
+
+type Cache =
+  { executable :: FilePath
+  , dependencies :: Maybe (Array FilePath)
+  , dirty :: Boolean
+  , rebuild :: RunnerM Unit
+  }
+
+getCache :: { rulePackages :: Map { package :: String } PackageSpec } -> RunnerM Cache
+getCache { rulePackages } = do
+  dependencies <- readSourceMapFile <#> map \{ sources } ->
+    sources
+    # filter (not ignoredDependency)
+    <#> \s -> cacheDir <> "/" <> s
+
+  bundleExists <- FS.exists bundlePath
+  newerDeps <-
+    if bundleExists
+      then anyDependenciesNewerThanBundle `traverse` dependencies
+      else pure Nothing
+
+  pure
+    { executable: bundlePath
+    , dependencies
+    , dirty: not bundleExists || newerDeps == Just true
+    , rebuild: rebuildCache { rulePackages, bundleFile }
+    }
+  where
+    configHash = hashConfig { rulePackages }
+    bundleFile = "bundle-" <> configHash <> ".mjs"
+    bundlePath = cacheDir <> "/" <> bundleFile
+    sourceMapFilePath = bundlePath <> ".map"
+
+    readSourceMapFile =
+      ifM (FS.exists sourceMapFilePath)
+        (Just <$> (decodeSourceMapFile =<< FS.readFile sourceMapFilePath))
+        (pure Nothing)
+
+    decodeSourceMapFile content = rightOrDie do
+      json <- JSON.parse content
+      J.decode sourceMapCodec json # lmap DecodeError.print
+
+    ignoredDependency file =
+      head (String.split (Pattern NodePath.sep) file) # maybe false (_ `elem` ignoreDependencies)
+
+    ignoreDependencies =
+      ["node_modules", "<stdin>", ".spago"]
+
+    anyDependenciesNewerThanBundle deps = do
+      { modifiedTime: bundleTime } <- FS.stat bundlePath
+      existingDeps <- catMaybes <$> for deps \d -> ifM (FS.exists d) (pure $ Just d) (pure Nothing)
+      depStats <- for existingDeps \d -> FS.stat d <#> _.modifiedTime <#> (_ /\ d)
+      let mLatestDep = maximumBy (comparing fst) depStats
+
+      logDebug $ fold
+        [ bundlePath, " last modified at ", formatTime bundleTime
+        , ", latest dependency ", maybe "<none>" snd mLatestDep
+        , " time is ", maybe "<none>" (formatTime <<< fst) mLatestDep
+        ]
+      pure $ mLatestDep # maybe true \(t /\ _) -> bundleTime < t
 
 rebuildCache ::
   { rulePackages :: Map { package :: String } PackageSpec
@@ -80,6 +138,8 @@ rebuildCache { rulePackages, bundleFile } = do
       FS.unlink (cacheDir <> "/spago.lock") # tryOrDie
 
   logSameLine "Coming up with excuses..."
+  logDebug "Wrote workspace files"
+
   execSuccessOrDie_ "npm install" =<<
     execa "npm"
       [ "install"
@@ -97,8 +157,11 @@ rebuildCache { rulePackages, bundleFile } = do
         }
 
   logSameLine "Making a pitiful face..."
+  logDebug "Installed NPM dependencies"
+
   moduleGraphJson <- spagoGraphModules
   moduleGraph <- moduleGraphJson # JSON.parse # lmap DecodeError.basic >>= J.decode moduleGraphCodec # rightOrDie
+  logDebug "Obtained dependency module graph"
 
   let candidateModules = Map.fromFoldable do
         modul /\ { package } <- Map.toUnfoldable moduleGraph :: Array _
@@ -117,6 +180,8 @@ rebuildCache { rulePackages, bundleFile } = do
     cachedBundleMainModule { moduleName: mainModule, ruleModules }
 
   logSameLine "Revisiting complaints..."
+  logDebug "Wrote executable entry point"
+
   execSuccessOrDie_ "spago bundle" =<<
     execa "npx" ["spago", "bundle", "--source-maps"] _
       { cwd = Just cacheDir
@@ -125,6 +190,7 @@ rebuildCache { rulePackages, bundleFile } = do
       }
 
   logSameLine "Done, ready to whine."
+  logDebug "Bundled the executable"
   logInfo ""
   where
     isLocalPackage = case _ of
@@ -196,44 +262,6 @@ hashConfig { rulePackages } = hashString $ fold
       JustPackage -> "*"
       PackageVersion v -> formatVersion v
       LocalPackage p -> p.path <> ":" <> fromMaybe "" p.module
-
-dependenciesChanged :: FilePath -> FilePath -> RunnerM Boolean
-dependenciesChanged cwd mapFile = do
-  logDebug $ "Checking dependency timestamps based on " <> mapFile
-  readMapFile >>= case _ of
-    Nothing -> do
-      logDebug $ mapFile <> " doesn't exist. Assuming dependencies have changed."
-      pure true
-    Just { sources } -> do
-      let cleanSources = sources # filter (not ignored)
-      { modifiedTime: mapFileTime } <- FS.stat mapFilePath
-
-      fileStats <- for cleanSources \source -> FS.stat (cwd <> "/" <> source) <#> _.modifiedTime <#> (_ /\ source)
-      let mLatestSource = maximumBy (comparing fst) fileStats
-
-      logDebug $ fold
-        [ mapFile, " last modified at ", formatTime mapFileTime
-        , ", latest dependency ", maybe "<none>" snd mLatestSource
-        , " time is ", maybe "<none>" (formatTime <<< fst) mLatestSource
-        ]
-      pure $ mLatestSource # maybe true \(t /\ _) -> mapFileTime < t
-  where
-    mapFilePath = cwd <> "/" <> mapFile
-
-    readMapFile =
-      ifM (FS.exists mapFilePath)
-        (Just <$> (decodeMapFile =<< FS.readFile mapFilePath))
-        (pure Nothing)
-
-    decodeMapFile content = rightOrDie do
-      json <- JSON.parse content
-      J.decode sourceMapCodec json # lmap DecodeError.print
-
-    ignored file =
-      head (String.split (Pattern NodePath.sep) file) # maybe false (_ `elem` ignore)
-
-    ignore =
-      ["node_modules", "<stdin>", ".spago"]
 
 type SpagoYaml =
   { package ::

@@ -72,7 +72,7 @@ integrationSpecs { debug, accept } = do
         patchProjectPathIn "whine.yaml"
         runWhineAndCheckOutput (caseDir // "with-local-rule-config.txt") []
 
-        -- Run multiple times, make sure there is the same input
+        -- Run multiple times, make sure output is the same
         for_ [1,2,3] \_ -> do
           output1 <- runWhine ["--debug"]
           checkOutput
@@ -96,8 +96,8 @@ integrationSpecs { debug, accept } = do
     patchLatestDependency = Regex.replace latestDependencyRegex "latest dependency <SNIP> time is"
     latestDependencyRegex = Regex.unsafeRegex "latest dependency [^ ]+ time is" RegexFlags.global
 
-    patchBundleHash = Regex.replace bundleHashRegex "bundle-<HASH>.mjs.map"
-    bundleHashRegex = Regex.unsafeRegex "bundle-.+\\.mjs\\.map" RegexFlags.global
+    patchBundleHash = Regex.replace bundleHashRegex "bundle-<HASH>.mjs"
+    bundleHashRegex = Regex.unsafeRegex "bundle-.+\\.mjs" RegexFlags.global
 
 prepareEnvironment :: { debug :: Boolean } -> Effect
   { copyTree :: FilePath -> Aff Unit
