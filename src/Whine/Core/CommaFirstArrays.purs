@@ -60,6 +60,6 @@ rule _ = emptyRule { onExpr = onExpr }
     onExpr :: Handle Expr
     onExpr = Handle case _ of
       ExprArray a ->
-        commaFirstRule a rangeOf "Format array literals comma-first, align elements vertically"
+        commaFirstRule a rangeOf "Format array literals comma-first, align items vertically"
       _ ->
         pure unit
