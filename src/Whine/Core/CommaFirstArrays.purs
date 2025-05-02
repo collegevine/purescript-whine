@@ -49,57 +49,17 @@ module Whine.Core.CommaFirstArrays where
 
 import Whine.Prelude
 
-import Data.Foldable (or)
 import PureScript.CST.Range (rangeOf)
-import PureScript.CST.Types (Expr(..), Separated(..), Wrapped(..))
-import Whine.Types (Handle(..), Rule, emptyRule, reportViolation)
+import PureScript.CST.Types (Expr(..))
+import Whine.Core.CommaFirst (commaFirstRule)
+import Whine.Types (Handle(..), Rule, emptyRule)
 
 rule :: JSON -> Rule
 rule _ = emptyRule { onExpr = onExpr }
   where
     onExpr :: Handle Expr
     onExpr = Handle case _ of
-      ExprArray (Wrapped { open, value: Just (Separated items), close }) -> do
-        for_ (mergeRanges violations) \range ->
-          reportViolation
-            { source: Just range
-            , message: "Format array literals comma-first, align items vertically"
-            }
-        where
-          multiLine = open.range.start.line /= close.range.end.line
-          lastItem = last items.tail <#> snd # fromMaybe items.head
-
-          firstItem = open /\ items.head
-          newLineStartingItems = firstItem : do
-            (_ /\ prevItem) /\ (nextComma /\ nextItem) <- zip (firstItem : items.tail) items.tail
-            guard $ (rangeOf prevItem).end.line < (rangeOf nextItem).start.line
-            pure $ nextComma /\ nextItem
-
-          violations
-            | multiLine = misalignedPrefixes <> closeBracket
-            | otherwise = []
-
-          closeBracket = do
-            guard $ or
-              [ close.range.start.line /= (rangeOf lastItem).end.line + 1
-              , close.range.start.column /= open.range.start.column
-              ]
-            pure
-              { start: (rangeOf lastItem).end
-              , end: close.range.end
-              }
-
-          misalignedPrefixes = do
-            prefix /\ item <- newLineStartingItems
-            guard $ or
-              [ prefix.range.end.line /= (rangeOf item).start.line
-              , prefix.range.end.column /= (rangeOf item).start.column - 1
-              , prefix.range.start.column /= open.range.start.column
-              ]
-            pure
-              { start: prefix.range.start
-              , end: (rangeOf item).end
-              }
-
+      ExprArray a ->
+        commaFirstRule a rangeOf "Format array literals comma-first, align elements vertically"
       _ ->
         pure unit

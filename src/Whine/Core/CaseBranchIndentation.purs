@@ -39,7 +39,7 @@ rule _ = emptyRule { onExpr = onExpr }
             smaller = if length yes <= length no then yes else no
         unless consistentIndent $
           reportViolation
-            { source: mergeRanges $ smaller # concatMap \(head /\ body) -> [head, body]
+            { source: unionManyRanges $ smaller # concatMap \(head /\ body) -> [head, body]
             , message: "Inconsistent indentation in case branches: keep either all single-line or all multi-line"
             }
         where
