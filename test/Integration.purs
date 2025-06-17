@@ -87,6 +87,9 @@ integrationSpecs { debug, accept } = do
         output2 <- runWhine ["--debug"]
         checkOutput (patchTime $ patchBundleHash output2) (caseDir // "with-local-rule-changed.txt")
 
+      it "Allows to configure same rule multiple times with different suffixes" do
+        runTest { caseDir: "2-multirules", whineArgs: [], expectedOutput: "output.txt" }
+
   where
     patchTime = Regex.replace timeRegex "<TIMESTAMP>"
     timeRegex = Regex.unsafeRegex

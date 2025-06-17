@@ -4,11 +4,13 @@ import Whine.Runner.Prelude
 
 import Codec.JSON.DecodeError as DecodeError
 import Control.Monad.Error.Class (throwError)
+import Data.Array.NonEmpty as NEA
 import Data.Codec as Codec
 import Data.Codec.JSON as CJ
 import Data.Codec.JSON.Common as CJ.Common
 import Data.Codec.JSON.Strict as CJS
 import Data.Map as Map
+import Data.String as String
 import Data.String.NonEmpty as NES
 import Effect.Exception as Err
 import JSON as JSON
@@ -73,10 +75,18 @@ type ConfigJson =
 -- | erroneous rules do not make it into the resulting map.
 parseRuleConfigs :: ∀ m. MonadReport (WithRule + ()) m => RuleFactories -> Map String JSON -> m RuleSet
 parseRuleConfigs factories config =
-  Map.fromFoldable <$> catMaybes <$>
+  Map.fromFoldable <$> catMaybes <$> concat <$>
+
     for factories \(ruleId /\ factory) -> do
 
-      let ruleConfig = Map.lookup ruleId config
+      let configs =
+            Map.lookup ruleId configsByRule
+            <#> map (rmap Just)
+            # fromMaybe [ruleId /\ Nothing]
+
+      for configs \(effectiveRuleId /\ ruleConfig) -> do
+        let
+          ruleConfigAsMap :: Maybe (Map String JSON)
           ruleConfigAsMap = ruleConfig >>= (CJ.decode (CJ.Common.strMap CJ.json) >>> hush)
 
           orFail :: ∀ a. _ -> Either String a -> m (Maybe a)
@@ -94,23 +104,35 @@ parseRuleConfigs factories config =
             Just value ->
               value # CJ.decode codec # lmap DecodeError.print # orFail ("Malformed '" <> name <> "'")
 
-      include <- commonProp "include" (CJ.array CJ.Common.nonEmptyString)
-      exclude <- commonProp "exclude" (CJ.array CJ.Common.nonEmptyString)
-      enabled <- commonProp "enabled" CJ.boolean <#> fromMaybe true
+        include <- commonProp "include" (CJ.array CJ.Common.nonEmptyString)
+        exclude <- commonProp "exclude" (CJ.array CJ.Common.nonEmptyString)
+        enabled <- commonProp "enabled" CJ.boolean <#> fromMaybe true
 
-      if enabled then
-        factory (fromMaybe JSON.null ruleConfig)
-          <#> (\rule -> ruleId /\
-            { rule
-            , globs:
-              { include: include # fromMaybe []
-              , exclude: exclude # fromMaybe []
+        if enabled then
+          factory (fromMaybe JSON.null ruleConfig)
+            <#> (\rule -> effectiveRuleId /\
+              { rule
+              , globs:
+                { include: include # fromMaybe []
+                , exclude: exclude # fromMaybe []
+                }
               }
-            }
-          )
-          # orFail "Malformed config"
-      else
-        pure Nothing
+            )
+            # orFail "Malformed config"
+        else
+          pure Nothing
+
+  where
+    -- If the config contains the same rule ID multiple times, with different subids,
+    -- like "rule/subid1" and "rule/subid2", we group them by the main rule ID, and
+    -- the map values become arrays of the individual configs.
+    configsByRule :: Map String (Array (String /\ JSON))
+    configsByRule =
+      (Map.toUnfoldable config :: Array _)
+      >>= (\(key /\ value) -> key # String.split (Pattern "/") # take 1 <#> (_ /\ key /\ value))
+      # groupAllBy (comparing fst)
+      <#> (\g -> fst (NEA.head g) /\ (snd <$> NEA.toArray g))
+      # Map.fromFoldable
 
 -- | Reads config from a given file and parses it.
 readConfig :: ∀ m. MonadEffect m => RuleFactories -> FilePath -> WhineM (WithRule + WithFile + WithMuted + ()) Env m Config

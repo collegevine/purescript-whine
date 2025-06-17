@@ -1,0 +1,21 @@
+rulePackages:
+  - whine-core:
+      local: PROJECT_PATH
+      module: Whine.Core.WhineRules
+
+rules:
+  UndesirableFunctions:
+    functions:
+      f: Function f should not be used
+    include:
+      - src/A.purs
+
+  UndesirableFunctions/foo:
+    functions:
+      g: Function g should not be used
+    include:
+      - src/B.purs
+
+  UndesirableFunctions/bar:
+    functions:
+      h: Function h should not be used
