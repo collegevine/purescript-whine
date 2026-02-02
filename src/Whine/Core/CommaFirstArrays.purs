@@ -52,14 +52,12 @@ import Whine.Prelude
 import PureScript.CST.Range (rangeOf)
 import PureScript.CST.Types (Expr(..))
 import Whine.Core.CommaFirst (commaFirstRule)
-import Whine.Types (Handle(..), Rule, emptyRule)
+import Whine.Traversals (everywhereOnExprs)
+import Whine.Types (Rule(..))
 
 rule :: JSON -> Rule
-rule _ = emptyRule { onExpr = onExpr }
-  where
-    onExpr :: Handle Expr
-    onExpr = Handle case _ of
-      ExprArray a ->
-        commaFirstRule a rangeOf "Format array literals comma-first, align items vertically"
-      _ ->
-        pure unit
+rule _ = Rule \m -> m # everywhereOnExprs case _ of
+  ExprArray a ->
+    commaFirstRule a rangeOf "Format array literals comma-first, align items vertically"
+  _ ->
+    pure unit

@@ -7,6 +7,7 @@ import Data.Codec.JSON as CJ
 import Whine.Core.CaseBranchIndentation as CaseBranchIndentation
 import Whine.Core.CommaFirstArrays as CommaFirstArrays
 import Whine.Core.CommaFirstRecords as CommaFirstRecords
+import Whine.Core.ModuleQualifiers as ModuleQualifiers
 import Whine.Core.UndesirableFunctions as UndesirableFunctions
 import Whine.Core.UndesirableModules as UndesirableModules
 import Whine.Types (RuleFactories, ruleFactory)
@@ -18,4 +19,5 @@ rules =
   , ruleFactory "CommaFirstArrays" CJ.json CommaFirstArrays.rule
   , ruleFactory "CommaFirstRecords" CJ.json CommaFirstRecords.rule
   , ruleFactory "CaseBranchIndentation" CJ.json CaseBranchIndentation.rule
+  , ruleFactory "ModuleQualifiers" ModuleQualifiers.codec ModuleQualifiers.rule
   ]

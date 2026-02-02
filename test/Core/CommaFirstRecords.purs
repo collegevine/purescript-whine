@@ -11,7 +11,7 @@ import Whine.Test (runRule)
 spec :: Spec Unit
 spec = describe "CommaFirstRecords" do
 
-  it "Reports comma-last array" $
+  it "Reports comma-last record" $
     hasViolations ["0:4-3:1"] """
       x = {
         x: 1,

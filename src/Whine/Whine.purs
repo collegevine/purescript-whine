@@ -8,72 +8,22 @@ import Effect.Exception as Err
 import Node.FS.Sync (readTextFile)
 import PureScript.CST (RecoveredParserResult(..), parseModule)
 import PureScript.CST.Range (class RangeOf)
-import PureScript.CST.Traversal (traverseBinder, traverseDecl, traverseExpr, traverseModule, traverseType)
-import PureScript.CST.Traversal as T
-import PureScript.CST.Types (Expr(..), Module(..), ModuleHeader(..), Separated(..), Wrapped(..))
-import PureScript.CST.Types as CST
+import PureScript.CST.Types (Module)
 import Record (merge)
 import Whine.Log (LogSeverity, logDebug)
 import Whine.Muting (MutedRange(..), mutedRanges)
 import Whine.Runner.Config (RuleSet)
 import Whine.Runner.Glob as Glob
-import Whine.Types (Handle(..), Rule, WithFile, WithMuted, WithRule, reportViolation)
-import WhineM (CurrentModule(..), WhineM, mapEnv, mapViolations)
+import Whine.Types (Rule(..), WithFile, WithMuted, WithRule, reportViolation)
+import WhineM (WhineM, mapViolations)
 
 -- | Given a parsed PS module, runs all the rules on it. The rules report
 -- | violations via Writer side-effects.
 runRules :: ∀ m e. MonadEffect m => RangeOf e => RuleSet -> Module e -> WhineM (WithRule + ()) { logLevel :: LogSeverity } m Unit
-runRules rs mdl = void $ mapEnv (merge { currentModule: CurrentModule \f -> f mdl }) do
-  onModule mdl
-  traverseModule visitor mdl
-  where
-    visitor =
-      { onBinder: \x -> allRules _.onBinder x *> traverseBinder visitor x
-      , onExpr: \x -> allRules _.onExpr x *> traverseExpr' visitor x
-      , onDecl: \x -> allRules _.onDecl x *> traverseDecl visitor x
-      , onType: \x -> allRules _.onType x *> traverseType visitor x
-      }
-
-    allRules :: ∀ x. (Rule -> Handle x) -> x e -> _
-    allRules f x =
-      forWithIndex_ rs \rid { rule } ->
-        let (Handle h) = f rule
-        in mapViolations (merge { rule: rid }) (h x)
-
-    onModule :: Module e -> _
-    onModule m@(Module { header: ModuleHeader header }) = do
-      allRules _.onModule m
-      for_ header.imports \imp ->
-        allRules _.onModuleImport imp
-      for_ header.exports \(Wrapped { value: Separated { head, tail } }) -> do
-        allRules _.onModuleExport head
-        for_ tail \(_ /\ exp) -> allRules _.onModuleExport exp
-
-
-    -------------------------------------------------------------------------------------------------
-    --- These two functions are a workaround for this issue:
-    ---   https://github.com/natefaubion/purescript-language-cst-parser/pull/59
-    -------------------------------------------------------------------------------------------------
-    traverseExpr'
-      :: ∀ ee f r
-      . Applicative f
-      => { onBinder :: T.Rewrite ee f CST.Binder, onExpr :: T.Rewrite ee f CST.Expr, onType :: T.Rewrite ee f CST.Type | r }
-      -> T.Rewrite ee f CST.Expr
-    traverseExpr' k = case _ of
-      CST.ExprApp f args -> ExprApp <$> k.onExpr f <*> traverse (traverseSpine k) args
-      anotherExpr -> traverseExpr k anotherExpr
-
-    traverseSpine
-      :: ∀ ee f r
-      . Applicative f
-      => { onBinder :: T.Rewrite ee f CST.Binder, onExpr :: T.Rewrite ee f CST.Expr, onType :: T.Rewrite ee f CST.Type | r }
-      -> T.Rewrite ee f (CST.AppSpine CST.Expr)
-    traverseSpine k = case _ of
-      CST.AppType tok ty -> CST.AppType tok <$> k.onType ty
-      CST.AppTerm expr -> CST.AppTerm <$> k.onExpr expr
-    -------------------------------------------------------------------------------------------------
-    -------------------------------------------------------------------------------------------------
-
+runRules rs mdl =
+  forWithIndex_ rs \rid { rule } ->
+    let (Rule r) = rule
+    in mapViolations (merge { rule: rid }) (r mdl)
 
 -- | Given a file path, reads the file, then passes it to `checkModule` (see
 -- | comments there).

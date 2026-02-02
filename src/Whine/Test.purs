@@ -47,6 +47,7 @@ runRule' :: ∀ m. MonadEffect m => MonadThrow Error m =>
   }
   -> m (Violations ())
 runRule' args = do
+  pure unit
   _ /\ violations <- runWhineM { logLevel: Log.LogInfo }
     case parseModule mod of
       ParseFailed _ -> throwError $ error "Failed to parse"

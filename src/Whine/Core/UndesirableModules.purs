@@ -21,15 +21,14 @@ import Data.Codec.JSON as CJ
 import Data.Codec.JSON.Common as CJ.Common
 import Data.Codec.JSON.Record as CJR
 import Data.Map as Map
-import PureScript.CST.Types (ImportDecl(..), ModuleName, Name(..))
-import Whine.Types (Handle(..), Rule, emptyRule, reportViolation)
+import PureScript.CST.Types (ImportDecl(..), Module(..), ModuleHeader(..), ModuleName, Name(..))
+import Whine.Types (Rule(..), reportViolation)
 
 rule :: Map ModuleName String -> Rule
-rule badModules = emptyRule
-  { onModuleImport = Handle \(ImportDecl { module: Name m }) -> do
-      Map.lookup m.name badModules # traverse_ \message ->
-        reportViolation { source: Just m.token.range, message }
-  }
+rule badModules = Rule \(Module { header: ModuleHeader { imports }}) ->
+  for_ imports \(ImportDecl { module: Name m }) ->
+    Map.lookup m.name badModules # traverse_ \message ->
+      reportViolation { source: Just m.token.range, message }
 
 codec :: CJ.Codec (Map ModuleName String)
 codec =

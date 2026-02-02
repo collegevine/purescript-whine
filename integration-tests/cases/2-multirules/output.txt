@@ -1,12 +1,17 @@
-[36msrc/B.purs[0m:4:5:  [31mUndesirableFunctions/foo[0m: Function g should not be used
+[36msrc/B.purs[0m:5:7:  [31mCommaFirstArrays[0m: Format array literals comma-first, align items vertically
 [93m
-    4: y = g 1
+    5: z = h [2,
+    6:   3]
 [0m
 [36msrc/B.purs[0m:5:5:  [31mUndesirableFunctions/bar[0m: Function h should not be used
 [93m
     5: z = h [2,
 [0m
-[36msrc/B.purs[0m:5:7:  [31mCommaFirstArrays[0m: Format array literals comma-first, align items vertically
+[36msrc/B.purs[0m:4:5:  [31mUndesirableFunctions/foo[0m: Function g should not be used
+[93m
+    4: y = g 1
+[0m
+[36msrc/A.purs[0m:5:7:  [31mCommaFirstArrays[0m: Format array literals comma-first, align items vertically
 [93m
     5: z = h [2,
     6:   3]
@@ -18,9 +23,4 @@
 [36msrc/A.purs[0m:5:5:  [31mUndesirableFunctions/bar[0m: Function h should not be used
 [93m
     5: z = h [2,
-[0m
-[36msrc/A.purs[0m:5:7:  [31mCommaFirstArrays[0m: Format array literals comma-first, align items vertically
-[93m
-    5: z = h [2,
-    6:   3]
 [0m
