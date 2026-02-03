@@ -7,13 +7,10 @@ import Control.Monad.Reader (class MonadAsk, class MonadTrans, ReaderT, ask, lif
 import Control.Monad.Writer (class MonadTell, runWriterT)
 import Data.Array as Array
 import Effect.Aff.Class (class MonadAff)
-import PureScript.CST.Types (Module)
 import Safe.Coerce (coerce)
 import Type.Equality (class TypeEquals)
 import Whine.Log (class MonadLog, LogSeverity, logDefault)
-import Whine.Types (class MonadContext, class MonadReport, class MonadRules, Violation)
-
-newtype CurrentModule = CurrentModule (∀ r. (∀ e. Module e -> r) -> r)
+import Whine.Types (class MonadReport, class MonadRules, Violation)
 
 newtype WhineM v env m a = WhineM (WriterT (Array (Violation v)) (ReaderT env m) a)
 derive newtype instance Functor m => Functor (WhineM v env m)
@@ -35,18 +32,12 @@ instance Monad m => MonadReport v (WhineM v env m) where
   reportViolation =
     Array.singleton >>> tell
 
-instance (Monad m, TypeEquals env { currentModule :: CurrentModule | r }) => MonadContext (WhineM v env m) where
-  currentModule f = do
-    env <- ask
-    case coerce env :: { currentModule :: CurrentModule | r } of
-      { currentModule: CurrentModule h } -> h f
-
 instance (MonadEffect m, TypeEquals env { logLevel :: LogSeverity | r }) => MonadLog (WhineM v env m) where
   log severity message = do
     level <- ask <#> (coerce :: env -> { logLevel :: LogSeverity | r }) <#> _.logLevel
     logDefault { level, severity } message
 
-instance (MonadEffect m, TypeEquals env { logLevel :: LogSeverity, currentModule :: CurrentModule | r }) => MonadRules v (WhineM v env m)
+instance (MonadEffect m, TypeEquals env { logLevel :: LogSeverity | r }) => MonadRules v (WhineM v env m)
 
 runWhineM :: ∀ v env m a. MonadEffect m => env -> WhineM v env m a -> m (a /\ Array (Violation v))
 runWhineM env (WhineM m) = runReaderT (runWriterT m) env

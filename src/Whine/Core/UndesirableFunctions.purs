@@ -25,7 +25,8 @@ import Data.String as String
 import PureScript.CST.Range (rangeOf)
 import PureScript.CST.Types (Expr(..), Ident(..), Import(..), ImportDecl(..), Module(..), ModuleHeader(..), ModuleName, Name(..), Operator(..), QualifiedName(..), Separated(..), Wrapped(..))
 import Whine.Log (logDebug)
-import Whine.Types (Handle(..), Rule, currentModule, emptyRule, reportViolation)
+import Whine.Traversals (everywhereOnExprs)
+import Whine.Types (Rule(..), reportViolation)
 
 -- Config for this rule is a two-level map: first level is names of functions
 -- that are undesirable, and under each function a list of modules whence this
@@ -52,34 +53,32 @@ import Whine.Types (Handle(..), Rule, currentModule, emptyRule, reportViolation)
 type Args = Map { function :: String } (Map (Maybe ModuleName) String)
 
 rule :: Args -> Rule
-rule badFunctions = emptyRule { onExpr = onExpr }
+rule badFunctions = Rule \m -> m # everywhereOnExprs case _ of
+
+  e@(ExprIdent (QualifiedName { name: Ident function, module: mod }))
+    | Just mods <- Map.lookup { function } badFunctions -> do -- This function is on the list of undesirables.
+        logDebug $ "Checking " <> function <> " from " <> show (unwrap <$> mod)
+        logDebug $ "Modules: " <> show ((lmap $ map unwrap) <$> Map.toUnfoldable mods :: Array _)
+        let report message = reportViolation { source: Just $ rangeOf e, message }
+            importedFrom = qualifiedImport m mod <|> explicitImport m function <|> loneOpenImport m
+        logDebug $ "Imported from " <> show (unwrap <$> importedFrom)
+        case importedFrom of
+          Just imprt -> do -- Found whence this function is imported.
+            logDebug $ "Explicit message: " <> show (Map.lookup (Just imprt) mods)
+            logDebug $ "Module-agnostic message: " <> show (Map.lookup Nothing mods)
+            let message =
+                  Map.lookup (Just imprt) mods -- See if we have a message for this specific import.
+                  <|> Map.lookup Nothing mods -- If not, see if we have a module-agnostic message for this function.
+            report `traverse_` message
+
+          Nothing -> -- Couldn't find this function in any imports. It could have been imported via an "open" import.
+            for_ (Map.lookup Nothing mods) \message -> -- Report a module-agnostic message for this function, if defined.
+              report message
+
+  _ -> do
+    pure unit
+
   where
-    onExpr = Handle case _ of
-
-      e@(ExprIdent (QualifiedName { name: Ident function, module: mod }))
-        | Just mods <- Map.lookup { function } badFunctions -> -- This function is on the list of undesirables.
-            currentModule \m -> do
-              logDebug $ "Checking " <> function <> " from " <> show (unwrap <$> mod)
-              logDebug $ "Modules: " <> show ((lmap $ map unwrap) <$> Map.toUnfoldable mods :: Array _)
-              let report message = reportViolation { source: Just $ rangeOf e, message }
-                  importedFrom = qualifiedImport m mod <|> explicitImport m function <|> loneOpenImport m
-              logDebug $ "Imported from " <> show (unwrap <$> importedFrom)
-              case importedFrom of
-                Just imprt -> do -- Found whence this function is imported.
-                  logDebug $ "Explicit message: " <> show (Map.lookup (Just imprt) mods)
-                  logDebug $ "Module-agnostic message: " <> show (Map.lookup Nothing mods)
-                  let message =
-                        Map.lookup (Just imprt) mods -- See if we have a message for this specific import.
-                        <|> Map.lookup Nothing mods -- If not, see if we have a module-agnostic message for this function.
-                  report `traverse_` message
-
-                Nothing -> -- Couldn't find this function in any imports. It could have been imported via an "open" import.
-                  for_ (Map.lookup Nothing mods) \message -> -- Report a module-agnostic message for this function, if defined.
-                    report message
-
-      _ -> do
-        pure unit
-
     -- Look through imports in the header of the module and find one that is
     -- qualified with the given qualifier `mod`
     qualifiedImport :: ∀ e. Module e -> Maybe ModuleName -> Maybe ModuleName

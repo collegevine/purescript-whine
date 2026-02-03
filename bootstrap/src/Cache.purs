@@ -22,7 +22,7 @@ import Node.ChildProcess.Types as StdIO
 import Node.Path as NodePath
 import Partial.Unsafe (unsafePartial)
 import Spago.Generated.BuildInfo as BuildInfo
-import Whine.Bootstrap.Execa (execResultSuccessOrDie, execSuccessOrDie_, execa)
+import Whine.Bootstrap.Execa (execSuccessOrDie, execSuccessOrDie_, execa)
 import Whine.Bootstrap.Hash (hashString)
 import Whine.Bootstrap.JsonCodecs as J
 import Whine.Runner.Config (PackageSpec(..))
@@ -106,6 +106,7 @@ rebuildCache { rulePackages, bundleFile } = do
   let mainModule = "Main" <> unique
       packageName = "whine-cached-bootstrap"
       dependencies = Map.union rulePackages (uncurry Map.singleton whineCorePackage)
+      entryPointFile = cacheDir <> "/src/Main.purs"
 
   FS.mkDirP (cacheDir <> "/src")
   FS.writeFile (cacheDir <> "/package.json") "{}"
@@ -150,14 +151,13 @@ rebuildCache { rulePackages, bundleFile } = do
       , "vscode-languageserver"
       , "vscode-languageserver-textdocument"
       ]
-      _
-        { cwd = Just cacheDir
-        , stdout = Just StdIO.pipe
-        , stderr = Just StdIO.pipe
-        }
+      inCacheDirAndPipeOutputs
 
   logSameLine "Making a pitiful face..."
   logDebug "Installed NPM dependencies"
+
+  whenM (FS.exists entryPointFile) $
+    FS.unlink entryPointFile # tryOrDie
 
   moduleGraphJson <- spagoGraphModules
   moduleGraph <- moduleGraphJson # JSON.parse # lmap DecodeError.basic >>= J.decode moduleGraphCodec # rightOrDie
@@ -176,18 +176,14 @@ rebuildCache { rulePackages, bundleFile } = do
             inferredModule = Map.lookup package candidateModules
         pure $ specifiedModule <|> inferredModule
 
-  FS.writeFile (cacheDir <> "/src/Main.purs") $
+  FS.writeFile entryPointFile $
     cachedBundleMainModule { moduleName: mainModule, ruleModules }
 
   logSameLine "Revisiting complaints..."
   logDebug "Wrote executable entry point"
 
   execSuccessOrDie_ "spago bundle" =<<
-    execa "npx" ["spago", "bundle", "--source-maps"] _
-      { cwd = Just cacheDir
-      , stdout = Just StdIO.pipe
-      , stderr = Just StdIO.pipe
-      }
+    execa "npx" ["spago", "bundle", "--source-maps"] inCacheDirAndPipeOutputs
 
   logSameLine "Done, ready to whine."
   logDebug "Bundled the executable"
@@ -203,29 +199,22 @@ rebuildCache { rulePackages, bundleFile } = do
       logInfo $ prefix <> msg
 
     spagoGraphModules = do
-      proc <-
-        execa "npx" ["spago", "graph", "modules", "--json"] _
-          { cwd = Just cacheDir
-          , stdout = Just StdIO.pipe
-          , stderr = Just StdIO.pipe
-          }
+      -- First build to make sure all modules are fresh, in case we just
+      -- overwrote a previous config that was somehow incompatible.
+      execSuccessOrDie_ "spago build" =<<
+        execa "npx" ["spago", "build"] inCacheDirAndPipeOutputs
 
-      res <- liftAff proc.getResult
-
-      unless (res.exitCode == Just 0) do
-        logDebug "'spago graph modules' failed. Trying to build to see what the error was..."
-        FS.writeFile (cacheDir <> "/src/Main.purs") "module M where\nx = 42 :: Int"
-        execSuccessOrDie_ "spago build" =<<
-          execa "npx" ["spago", "build"] _
-            { cwd = Just cacheDir
-            , stdout = Just StdIO.pipe
-            , stderr = Just StdIO.pipe
-            }
-
-        logDebug "Building succeeded, but 'spago graph modules' still failed."
-        execResultSuccessOrDie "spago graph modules" res
+      -- Then get the module graph.
+      res <- execSuccessOrDie "spago graph modules" =<<
+        execa "npx" ["spago", "graph", "modules", "--json"] inCacheDirAndPipeOutputs
 
       pure res.stdout
+
+    inCacheDirAndPipeOutputs = _
+      { cwd = Just cacheDir
+      , stdout = Just StdIO.pipe
+      , stderr = Just StdIO.pipe
+      }
 
 whineCorePackage :: { package :: String } /\ PackageSpec
 whineCorePackage = { package: "whine-core" } /\ PackageVersion version

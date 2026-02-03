@@ -26,33 +26,31 @@ import Whine.Prelude
 import Data.Array.NonEmpty as NEA
 import PureScript.CST.Range (rangeOf)
 import PureScript.CST.Types (Expr(..), Guarded(..), GuardedExpr(..))
-import Whine.Types (Handle(..), Rule, emptyRule, reportViolation)
+import Whine.Traversals (everywhereOnExprs)
+import Whine.Types (Rule(..), reportViolation)
 
 rule :: JSON -> Rule
-rule _ = emptyRule { onExpr = onExpr }
-  where
-    onExpr :: Handle Expr
-    onExpr = Handle case _ of
-      ExprCase { branches } -> do
-        let { yes, no } = partition isOneLine branchesAndGuards
-            consistentIndent = null yes || null no
-            smaller = if length yes <= length no then yes else no
-        unless consistentIndent $
-          reportViolation
-            { source: unionManyRanges $ smaller # concatMap \(head /\ body) -> [head, body]
-            , message: "Inconsistent indentation in case branches: keep either all single-line or all multi-line"
-            }
-        where
-          isOneLine (head /\ body) = head.start.line == body.end.line
+rule _ = Rule \m -> m # everywhereOnExprs case _ of
+  ExprCase { branches } -> do
+    let { yes, no } = partition isOneLine branchesAndGuards
+        consistentIndent = null yes || null no
+        smaller = if length yes <= length no then yes else no
+    unless consistentIndent $
+      reportViolation
+        { source: unionManyRanges $ smaller # concatMap \(head /\ body) -> [head, body]
+        , message: "Inconsistent indentation in case branches: keep either all single-line or all multi-line"
+        }
+    where
+      isOneLine (head /\ body) = head.start.line == body.end.line
 
-          branchesAndGuards = do
-            head /\ body <- NEA.toArray branches
-            case body of
-              Unconditional _ _ ->
-                pure $ rangeOf head /\ rangeOf body
-              Guarded gs -> do
-                GuardedExpr guarded <- NEA.toArray gs
-                pure $ guarded.bar.range /\ rangeOf guarded.where
+      branchesAndGuards = do
+        head /\ body <- NEA.toArray branches
+        case body of
+          Unconditional _ _ ->
+            pure $ rangeOf head /\ rangeOf body
+          Guarded gs -> do
+            GuardedExpr guarded <- NEA.toArray gs
+            pure $ guarded.bar.range /\ rangeOf guarded.where
 
-      _ ->
-        pure unit
+  _ ->
+    pure unit
