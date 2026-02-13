@@ -27,7 +27,7 @@ import Data.Nullable (Nullable) as Reexport
 import Data.Profunctor (dimap) as Reexport
 import Data.String (Pattern(..), Replacement(..), joinWith) as Reexport
 import Data.String.NonEmpty (NonEmptyString) as Reexport
-import Data.Traversable (any, fold, for, for_, intercalate, traverse, traverse_, sequence, sequence_) as Reexport
+import Data.Traversable (all, any, fold, for, for_, intercalate, traverse, traverse_, sequence, sequence_) as Reexport
 import Data.Tuple (Tuple(..), fst, snd) as Reexport
 import Data.Tuple.Nested (type (/\), (/\)) as Reexport
 
