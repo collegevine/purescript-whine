@@ -1,4 +1,4 @@
-import LS from 'vscode-languageserver/node.js'
+import LS from 'vscode-languageserver/node'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 
 export const create_ = () => new LS.TextDocuments(TextDocument)
